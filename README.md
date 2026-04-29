@@ -4,10 +4,10 @@
 
 ## 📄 Repository Description
 
-This repository is the catalog of GitHub Copilot agents for the osinfra-io platform. Each agent in `.github/agents/` manages a specific domain of platform resources — reading current state and opening pull requests with every change.
+This repository is the catalog of GitHub Copilot agents for the osinfra-io platform. Each agent in `.github/agents/` is a self-serve interface to a platform capability — describe what you need, the agent handles the platform internals and opens a pull request with every change.
 
 ## Agents
 
 | Agent | Description |
 |---|---|
-| [nomos.agent.md](.github/agents/nomos.agent.md) | Manages all logos-owned resources — onboard teams, add or remove members, manage repositories, environments, GCP projects, and GKE cluster locations |
+| [nomos.agent.md](.github/agents/nomos.agent.md) | The self-serve interface to the osinfra.io platform — onboard teams, manage members and repositories, request infrastructure, and configure platform resources |

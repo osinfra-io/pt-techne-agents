@@ -14,7 +14,7 @@ Fine-grained PATs must be created at [github.com/settings/personal-access-tokens
 
 ## nomos.agent.md
 
-Manages all logos-owned resources — onboard teams, add or remove members, manage repositories, GitHub environments, Google Cloud Platform projects, and Google Kubernetes Engine cluster configuration. Reads the current state and opens a pull request with every change.
+The self-serve interface to the osinfra.io platform — describe what your team needs and Nomos handles the platform internals, opening a pull request with every change.
 
 **Supported operations:**
 
