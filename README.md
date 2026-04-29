@@ -1,4 +1,4 @@
-# <img align="left" width="45" height="45" src="https://github.com/user-attachments/assets/24215c8b-4b69-4b58-922d-db244f4a5e30" alt="Techne Agents"> Techne Agents
+# Techne Agents
 
 [![Copilot Agent](https://img.shields.io/badge/Copilot%20Agent-Enabled-6E40C9?style=for-the-badge&logo=githubcopilot&logoColor=white)](https://github.com/osinfra-io/pt-techne-agents/tree/main/.github/agents)
 
