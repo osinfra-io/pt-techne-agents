@@ -147,7 +147,7 @@ Before creating any files, show a formatted summary of everything collected and 
 **New team onboarding opens two PRs in sequence on `pt-logos`, plus additional PRs on other repos.**
 
 **PR 1 — Create the GitHub environment**:
-- Use the `teams/pt-logos.tfvars` content already read during startup — do not re-read it. From it, construct the **complete** pt-logos team spec, adding `{team-key-without-prefix}-production` to `github_repositories["pt-logos"].environments`. The spec must satisfy the full schema — do not pass a partial or delta object. Then call `pt-techne-mcp-server/open_team_pr` with that spec. Note the `action` and branch name it returns.
+- Re-read `teams/pt-logos.tfvars` from the main branch immediately before constructing the spec — do not use the startup cache, which may be stale by the time the conversation completes. From it, construct the **complete** pt-logos team spec, adding `{team-key-without-prefix}-production` to `github_repositories["pt-logos"].environments`. The spec must satisfy the full schema — do not pass a partial or delta object. Then call `pt-techne-mcp-server/open_team_pr` with that spec. Note the `action` and branch name it returns.
 
 **PR 2 — Onboard the team**:
 1. Build the spec for the new team, then call `pt-techne-mcp-server/open_team_pr` with that spec. Note the branch name it returns.
