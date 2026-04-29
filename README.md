@@ -10,4 +10,4 @@ This repository is the catalog of GitHub Copilot agents for the osinfra-io platf
 
 | Agent | Description |
 |---|---|
-| [nomos.agent.md](.github/agents/nomos.agent.md) | The self-serve interface to the osinfra.io platform — onboard teams, manage members and repositories, request infrastructure, and configure platform resources |
+| [techne-nomos.agent.md](.github/agents/techne-nomos.agent.md) | The self-serve interface to the osinfra.io platform — onboard teams, manage members and repositories, request infrastructure, and configure platform resources |
