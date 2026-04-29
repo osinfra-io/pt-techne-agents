@@ -7,10 +7,11 @@ The agents in this directory use the [GitHub MCP server](https://github.com/gith
 | Permission | Access |
 |---|---|
 | Contents | Read and write |
+| Issues | Read and write |
 | Pull requests | Read and write |
 | Workflows | Read and write |
 
-Fine-grained PATs must be created at [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new).
+Fine-grained PATs must be created at [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new). When creating the token, set the resource owner to the **`osinfra-io` organization** (not individual repositories) so the token can operate across all repos the agent needs to reach.
 
 ## nomos.agent.md
 

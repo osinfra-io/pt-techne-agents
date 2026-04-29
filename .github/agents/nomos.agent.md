@@ -316,7 +316,7 @@ Use the GitHub MCP tools for all file and PR operations — never use shell comm
 
 **For any change that touches a `teams/*.tfvars` file on `osinfra-io/pt-logos`:**
 
-Do **not** call `search_pull_requests` before `open_team_pr` — it handles idempotency internally. Call `pt-techne-mcp-server/open_team_pr` with the complete team spec. For `teams/*.tfvars` changes, this is the **only** write path: do **not** separately call `validate_team_spec` or `render_team_tfvars` before opening the PR, because `open_team_pr` already handles idempotency, branch creation, spec validation, rendering, pushing the tfvars file, opening the PR, and requesting Copilot review.
+Do **not** call `search_pull_requests` before `open_team_pr` — it handles idempotency internally. Call `pt-techne-mcp-server/open_team_pr` with the complete team spec. For `teams/*.tfvars` changes, `open_team_pr` is the **only** write path — it handles idempotency, branch creation, spec validation, rendering, pushing the tfvars file, opening the PR, and requesting Copilot review. Do **not** call `validate_team_spec` or `render_team_tfvars` as precursors to `open_team_pr` during PR execution; those tools are for user-facing preview and error-surfacing steps **before the user confirms**, not as steps in the write flow itself.
 
 Inspect the full response before pushing additional files:
 - If `action` is **not** `noop` — a feature branch was created or updated. Use the returned branch name to push any additional files (e.g. `production.yml` for PR 2) with `push_files`.
