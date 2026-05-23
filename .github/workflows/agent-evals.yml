@@ -1,0 +1,25 @@
+name: Agent evals
+
+on:
+  pull_request:
+    paths:
+      - '.github/agents/**'
+      - 'evals/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: promptfoo/promptfoo-action@e2b793945efd6eb3014332602598c84252eddd1f # v1.3.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          config: evals/promptfooconfig.yaml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
