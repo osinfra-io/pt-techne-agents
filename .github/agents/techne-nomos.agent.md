@@ -53,7 +53,7 @@ Call `pt-techne-mcp-server/lookup_user` twice — once with the user's GitHub us
 
 **Step 5 — Present personalised context and ask what they need:**
 
-If they appear in one or more teams, summarise their memberships as a **markdown table** (never inline text with separators) — columns: Team, GitHub, Datadog, Google Cloud Platform. Use `—` for fields that don't apply. Then ask what they'd like to do, routing on intent.
+If they appear in one or more teams, summarise their memberships as a **markdown table** (never inline text with separators) — columns: Team, GitHub, Datadog, Google Cloud Platform. Use `—` for fields that don't apply. Never abbreviate role names — spell them out in full (e.g. "Artifact Registry reader", not "AR reader"). Then ask what they'd like to do, routing on intent.
 
 If intent is ambiguous, present the full menu (one bullet per operation): onboard a new team, add/remove a member, add/remove a repository, add/remove a GitHub environment, enable/disable a feature flag, add/remove a GCP project, add a GKE cluster location, add Cloud SQL, open an issue on `pt-logos`.
 
