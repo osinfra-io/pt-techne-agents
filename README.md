@@ -1,6 +1,7 @@
 # Techne Agents
 
 [![Copilot Agent](https://img.shields.io/badge/Copilot%20Agent-Enabled-6E40C9?style=for-the-badge&logo=githubcopilot&logoColor=white)](https://github.com/osinfra-io/pt-techne-agents/tree/main/.github/agents)
+[![Promptfoo](https://img.shields.io/github/actions/workflow/status/osinfra-io/pt-techne-agents/promptfoo.yml?style=for-the-badge&logo=github&label=Promptfoo)](https://github.com/osinfra-io/pt-techne-agents/actions/workflows/promptfoo.yml)
 
 ## 📄 Repository Description
 
