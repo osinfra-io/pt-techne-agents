@@ -1,4 +1,4 @@
-name: Agent evals
+name: Promptfoo
 
 on:
   pull_request:
