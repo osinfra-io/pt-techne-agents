@@ -9,10 +9,12 @@ on:
 
 permissions:
   contents: read
+  models: read
   pull-requests: write
 
 jobs:
   eval:
+    name: Evaluations
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
