@@ -49,7 +49,7 @@ If a platform tool fails for reasons other than validation (timeout, transport e
 
 **Step 4 — Search all team files for their identity:**
 
-Call `pt-techne-mcp-server/lookup_user` twice — once with the user's GitHub username, once with their validated `@osinfra.io` email address. Team membership in `teams/*.tfvars` may be represented by either form of identity — GitHub username (parent and child teams) or email (Datadog and Google groups) — so both lookups are needed to ensure the returned memberships are complete. The tool accepts exactly one identifier per call. Combine the results from both calls to build the full membership picture — no need to read team files individually.
+Call `pt-techne-mcp-server/lookup_user` twice — once with the user's GitHub username, once with their validated `@osinfra.io` email address. Team membership in `teams/*.tfvars` may be represented by either form of identity — GitHub username (parent and child teams) or email (Datadog and Google groups) — so both lookups are needed to ensure the returned memberships are complete. The tool accepts exactly one identifier per call. Combine the results from both calls to build the full membership picture — no need to read team files individually. These results are authoritative for the entire conversation — do **not** call `lookup_user` again later in the same session.
 
 **Step 5 — Present personalised context and ask what they need:**
 
