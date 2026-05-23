@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: read
-  models: read
 
 jobs:
   eval:
@@ -28,4 +27,4 @@ jobs:
           config: evals/promptfooconfig.yaml
           disable-comment: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

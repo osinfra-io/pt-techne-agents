@@ -8,7 +8,7 @@ Tests the Nomos Agent's behavior using [promptfoo](https://promptfoo.dev) — se
 brew install promptfoo
 
 cd pt-techne-agents
-GITHUB_TOKEN=$(gh auth token) promptfoo eval -c evals/promptfooconfig.yaml --no-cache --delay 5000
+ANTHROPIC_API_KEY=<your-key> promptfoo eval -c evals/promptfooconfig.yaml --no-cache
 ```
 
 View results in the browser:
@@ -23,7 +23,7 @@ promptfoo view
 promptfooconfig.yaml
   → loads agent system prompt from .github/agents/techne-nomos.agent.md
   → defines MCP tool schemas (matching the agent's tool list)
-  → sends user messages to GitHub Models API (gpt-4o)
+  → sends user messages to Anthropic API (Claude Sonnet)
   → asserts on tool calls returned by the model
 ```
 
@@ -63,4 +63,4 @@ When evals fail in CI:
 
 ## Rate Limits
 
-GitHub Models API rate limits vary by model and plan (RPM, RPD, tokens-per-request, concurrent requests). The `--delay 5000` flag spaces requests ~5 seconds apart which works well for typical free-tier limits. Adjust the delay based on your account's rate limits — check response headers (`x-ratelimit-remaining`) or the [GitHub Models documentation](https://docs.github.com/en/github-models) for current values.
+Anthropic's API has generous rate limits compared to GitHub Models. No `--delay` flag is needed for typical usage.

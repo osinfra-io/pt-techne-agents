@@ -1,6 +1,6 @@
 # Nomos Agent Evals
 #
-# Run:  cd pt-techne-agents && GITHUB_TOKEN=$(gh auth token) promptfoo eval -c evals/promptfooconfig.yaml --no-cache --delay 5000
+# Run:  cd pt-techne-agents && ANTHROPIC_API_KEY=<key> promptfoo eval -c evals/promptfooconfig.yaml --no-cache
 # View: promptfoo view
 
 description: Nomos Agent eval suite — covers all operations
@@ -18,12 +18,11 @@ defaultTest:
     systemPrompt: file://../.github/agents/techne-nomos.agent.md
 
 providers:
-  - id: openai:chat:gpt-4o
-    label: gpt-4o-github-models
+  - id: anthropic:messages:claude-sonnet-4-20250514
+    label: claude-sonnet
     config:
-      apiBaseUrl: https://models.inference.ai.azure.com
-      apiKeyEnvar: GITHUB_TOKEN
       temperature: 0
+      max_tokens: 1024
       tools:
         - type: function
           function:
