@@ -19,7 +19,7 @@ promptfoo view
 
 ## How It Works
 
-```
+```none
 promptfooconfig.yaml
   → loads agent system prompt from .github/agents/techne-nomos.agent.md
   → defines MCP tool schemas (matching the agent's tool list)
@@ -28,6 +28,7 @@ promptfooconfig.yaml
 ```
 
 Each test scenario verifies the agent's **first-turn behavior** given a user message:
+
 - Which tools it calls (and doesn't call)
 - Whether it respects safety constraints (no PR without confirmation)
 - Whether it avoids fabricating data
@@ -51,6 +52,7 @@ Add a new `tests:` entry in `evals/promptfooconfig.yaml`:
 ## Feedback Loop
 
 When evals fail in CI:
+
 1. A GitHub issue is opened with failure details
 2. Failures indicate the agent prompt or tool descriptions need improvement
 3. Common fixes:
