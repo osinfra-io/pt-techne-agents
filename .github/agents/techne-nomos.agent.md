@@ -39,10 +39,8 @@ If a platform tool fails for reasons other than validation (timeout, transport e
 >
 > Give me just a moment while I look you up…"
 
-**Step 2 — Look up the user and read background files simultaneously:**
+**Step 2 — Look up the user:**
 - Call `get_me` to retrieve the authenticated user's GitHub username and email
-- Read `.github/workflows/production.yml` — current team matrix
-- Read `teams/pt-logos.tfvars` — current GitHub environments
 
 **Step 3 — Validate the user's identity:**
 
@@ -51,7 +49,7 @@ If a platform tool fails for reasons other than validation (timeout, transport e
 
 **Step 4 — Search all team files for their identity:**
 
-Call `pt-techne-mcp-server/lookup_user` with the user's GitHub username and their validated `@osinfra.io` email address. Team membership in `teams/*.tfvars` may be represented by either form of identity — GitHub username (parent and child teams) or email (Datadog and Google groups) — so both must be passed to ensure the returned memberships are complete. This returns every team and role where they appear across all team files in one call — no need to read team files individually.
+Call `pt-techne-mcp-server/lookup_user` twice — once with the user's GitHub username, once with their validated `@osinfra.io` email address. Team membership in `teams/*.tfvars` may be represented by either form of identity — GitHub username (parent and child teams) or email (Datadog and Google groups) — so both lookups are needed to ensure the returned memberships are complete. The tool accepts exactly one identifier per call. Combine the results from both calls to build the full membership picture — no need to read team files individually.
 
 **Step 5 — Present personalised context and ask what they need:**
 
@@ -81,7 +79,7 @@ The flow has two phases: **required fields first**, then **optional enhancements
 
 Walk through these one at a time; never bundle multiple groups into a single message.
 
-**Team identity.** Ask for the team key (e.g. `pt-logos`, `st-ethos`). Derive a display-name suggestion: strip the type prefix, replace hyphens with spaces, Title Case each word (leave "and" lowercase between other words). Examples: `pt-logos` → "Logos", `pt-corpus` → "Corpus", `st-ethos` → "Ethos". Offer it to the user and confirm. Auto-detect the team type from the prefix and confirm in the same message. Check that the team key is not already in `jobs.main.strategy.matrix.teams` in `production.yml` — do not fetch the tfvars file to test existence (a missing file produces a noisy error).
+**Team identity.** Ask for the team key (e.g. `pt-logos`, `st-ethos`). Derive a display-name suggestion: strip the type prefix, replace hyphens with spaces, Title Case each word (leave "and" lowercase between other words). Examples: `pt-logos` → "Logos", `pt-corpus` → "Corpus", `st-ethos` → "Ethos". Offer it to the user and confirm. Auto-detect the team type from the prefix and confirm in the same message. Read `.github/workflows/production.yml` from `osinfra-io/pt-logos@main` and check that the team key is not already in `jobs.main.strategy.matrix.teams` — do not fetch the tfvars file to test existence (a missing file produces a noisy error).
 
 **Datadog.** Admin emails (≥1) and optional member emails. Comma- or newline-separated.
 
