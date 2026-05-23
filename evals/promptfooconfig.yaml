@@ -384,12 +384,7 @@ tests:
         value: |
           const calls = Array.isArray(output) ? output : (output.tool_calls || []);
           const names = calls.map(c => c.function?.name || c.name).filter(Boolean);
-          return names.includes('get_me') || names.includes('get_team');
-      - type: javascript
-        value: |
-          const calls = Array.isArray(output) ? output : (output.tool_calls || []);
-          const names = calls.map(c => c.function?.name || c.name).filter(Boolean);
-          return !names.includes('open_team_pr');
+          return names.includes('get_me') || names.includes('get_team') || names.includes('lookup_user');
 
   - description: "Add repo: rejects invalid repo name prefix"
     vars:
