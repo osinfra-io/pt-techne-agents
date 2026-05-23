@@ -8,7 +8,7 @@ Tests the Nomos Agent's behavior using [promptfoo](https://promptfoo.dev) — se
 brew install promptfoo
 
 cd pt-techne-agents
-ANTHROPIC_API_KEY=<your-key> promptfoo eval -c evals/promptfooconfig.yaml --no-cache
+promptfoo eval -c evals/promptfooconfig.yaml --no-cache
 ```
 
 View results in the browser:

@@ -1,6 +1,6 @@
 # Nomos Agent Evals
 #
-# Run:  cd pt-techne-agents && ANTHROPIC_API_KEY=<key> promptfoo eval -c evals/promptfooconfig.yaml --no-cache
+# Run:  cd pt-techne-agents && promptfoo eval -c evals/promptfooconfig.yaml --no-cache
 # View: promptfoo view
 
 description: Nomos Agent eval suite — covers all operations
