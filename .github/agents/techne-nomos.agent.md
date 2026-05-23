@@ -131,7 +131,7 @@ Before creating any files, show a formatted summary of everything collected and 
 **New team onboarding opens two PRs in sequence on `pt-logos`, plus additional PRs on other repos.**
 
 **PR 1 — Create the GitHub environment**:
-- Re-read `teams/pt-logos.tfvars` from the main branch immediately before constructing the spec — do not use the startup cache, which may be stale by the time the conversation completes. From it, construct the **complete** pt-logos team spec, adding `{team-key-without-prefix}-production` to `github_repositories["pt-logos"].environments`. The spec must satisfy the full schema — do not pass a partial or delta object. Then call `pt-techne-mcp-server/open_team_pr` with that spec. Note the `action` and branch name it returns.
+- Read `teams/pt-logos.tfvars` from `main` immediately before constructing the spec — do not reuse any earlier cached version, which may be stale by the time the conversation completes. From it, construct the **complete** pt-logos team spec, adding `{team-key-without-prefix}-production` to `github_repositories["pt-logos"].environments`. The spec must satisfy the full schema — do not pass a partial or delta object. Then call `pt-techne-mcp-server/open_team_pr` with that spec. Note the `action` and branch name it returns.
 
 **PR 2 — Onboard the team**:
 1. Build the spec for the new team, then call `pt-techne-mcp-server/open_team_pr` with that spec. Note the branch name it returns.
@@ -155,7 +155,7 @@ Open PR 1 first, then immediately open PR 2, PR 3 (docs), and any applicable Cor
 
 ---
 
-### Mutation operations (2–9, 11–12)
+### Mutation operations (2–9, 11)
 
 All mutations follow the same pattern:
 
@@ -170,16 +170,19 @@ All mutations follow the same pattern:
 
 | # | Trigger | Key questions | Warnings / special behaviour | PR title |
 |---|---------|---------------|------------------------------|----------|
-| 2 | Add/remove member | Which group? (parent team, child team, Datadog, Google group, artifact registry) · Add or remove? · Username(s) or email(s)? | Warn if removing the last maintainer. Pre-fill the user's own identity when adding themselves. | `"Update {team-key}: add/remove member from {group}"` |
+| 2 | Add/remove member | Which group? (parent team, child team, Datadog, Google group, artifact registry) · Add or remove? · Username(s) or email(s)? | Warn if removing the last maintainer. Pre-fill the user's own identity when adding themselves. Artifact registry groups only available when `platform_managed_project.kubernetes_engine` is configured. | `"Update {team-key}: add/remove member from {group}"` |
 | 3 | Add repository | Repo name · description · topics · push allowances · feature flags · Pages? · environments? | Name must equal team key or `{team-key}-{suffix}`. Check repo doesn't already exist. | `"Update {team-key}: add repository {repo-name}"` |
 | 4 | Remove repository | Which repo? | Show what will be removed; require explicit confirmation. | `"Update {team-key}: remove repository {repo-name}"` |
 | 5 | Add GitHub environment | Repo · env key · display name · reviewer teams · branch policy | Check key doesn't collide with existing environments. Default reviewers: `{team-key}-{env}-approvers`. | `"Update {team-key}: add environment {env-key} to {repo-name}"` |
 | 6 | Remove GitHub environment | Repo · env key | Show config; require explicit confirmation. | `"Update {team-key}: remove environment {env-key} from {repo-name}"` |
-| 7 | Enable/disable feature flag | Which flag? (menu: team-level, project-level, repo-level) · Enable or disable? | Dependency warnings: `enable_opentofu_state_management` requires `enable_workflows`; `enable_google_wif_service_account` requires `enable_workflows`; `enable_datadog_apm` requires `enable_datadog` + `kubernetes_engine`. | `"Update {team-key}: {enable/disable} {flag-name}"` |
+| 7 | Enable/disable feature flag | Which flag? (menu: team-level, project-level, repo-level) · Enable or disable? | Dependency warnings: `enable_opentofu_state_management` requires `enable_workflows`; `enable_google_wif_service_account` requires `enable_workflows`; `enable_datadog_apm` requires `enable_datadog` + `kubernetes_engine`. Only show project-level flags when `platform_managed_project` exists; only show `enable_datadog_apm` when `enable_datadog` is true and `kubernetes_engine` is configured. | `"Update {team-key}: {enable/disable} {flag-name}"` |
 | 8 | Add GCP project | Optional API services · enable Datadog? | Check `enable_google_project` not already true. | `"Update {team-key}: add Google Cloud Platform project"` |
 | 9 | Remove GCP project | (just team key) | Warn: Corpus will destroy the GCP project on next apply. Require explicit confirmation. | `"Update {team-key}: remove Google Cloud Platform project"` |
 | 11 | Add Cloud SQL | Regions (`us-east1`/`us-east4`) · database version (default `POSTGRES_16`) · machine tier (default `db-f1-micro`) | If `platform_managed_project` missing, ask to add it. Show existing config if `cloud_sql` already set. | `"Update {team-key}: add Cloud SQL"` |
-| 12 | Open a GitHub issue | Title · type (bug/enhancement/question) · description | No PR needed — use `issue_write` directly on `osinfra-io/pt-logos` with matching label. | — |
+
+### Operation 12 — Open a GitHub issue
+
+Ask for: title, type (bug/enhancement/question), and description. Create on `osinfra-io/pt-logos` using `issue_write` with the appropriate label (`bug`, `enhancement`, or `question`). No branch or PR needed.
 
 ---
 
@@ -228,7 +231,7 @@ Do **not** call `search_pull_requests` before `open_team_pr` — it handles idem
 
 Inspect the full response before pushing additional files:
 - If `action` is **not** `noop` — a feature branch was created or updated. Use the returned branch name to push any additional files (e.g. `production.yml` for PR 2) with `push_files`.
-- If `action` is `noop` — the tfvars content already matches `main` or an open PR. **Do not call `push_files` unconditionally.** Check whether the additional file already contains the expected change first.
+- If `action` is `noop` — the tfvars content already matches `main` or an open PR. **Do not call `push_files` unconditionally.** Check whether the additional file already contains the expected change. If it does, nothing more is needed. If it doesn't, use the standard manual flow below to open a dedicated PR for that file change only.
 
 **For changes to `osinfra-io/pt-ekklesia-docs` (team index + sidebar):**
 
