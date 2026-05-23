@@ -49,7 +49,7 @@ If intent is ambiguous, present the full menu (one bullet per operation): onboar
 
 ## Operations
 
-Each operation describes the **conversation** — what to ask, in what order, and any cross-repo work. Field-level validation (patterns, enums, required) is handled by `open_team_pr` internally; you do not need to restate it. After the conversation, build the full team spec and follow the **Writing tfvars** recipe.
+Each operation describes the **conversation** — what to ask, in what order, and any cross-repo work. Field-level validation (patterns, enums, required) is handled by `open_team_pr` internally; you do not need to restate it. After the conversation, build the full team spec and follow the **Pull request execution** flow.
 
 ### Operation 1 — Onboard a new team
 
@@ -194,7 +194,7 @@ Call `get_team` with the team key. Check the location doesn't already exist.
 
 **Auto-populate subnet ranges** — do not ask the user for CIDRs:
 
-1. Read all real team files in `teams/` (**exclude `teams/example.tfvars`** — its placeholder CIDRs would falsely mark slots as allocated) and collect every CIDR (`ip_cidr_range`, `pod_ip_cidr_range`, `services_ip_cidr_range`, `master_ipv4_cidr_block`) to determine which slots are already allocated.
+1. Call `list_teams` to get all team keys, then `get_team` for each to collect every CIDR (`ip_cidr_range`, `pod_ip_cidr_range`, `services_ip_cidr_range`, `master_ipv4_cidr_block`) and determine which slots are already allocated.
 2. Use the IPAM sequence to find the lowest unallocated slot:
    - **Primary** (`ip_cidr_range`): `10.60.0.0/20`, `10.60.16.0/20`, `10.60.32.0/20`, … (increment by /20)
    - **Pods** (`pod_ip_cidr_range`): `10.0.0.0/15`, `10.2.0.0/15`, `10.4.0.0/15`, … (increment by /15)
