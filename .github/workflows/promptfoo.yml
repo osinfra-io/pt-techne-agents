@@ -7,6 +7,10 @@ on:
       - 'evals/**'
   workflow_dispatch:
 
+concurrency:
+  group: promptfoo-${{ github.head_ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
