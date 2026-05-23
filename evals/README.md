@@ -53,7 +53,7 @@ Add a new `tests:` entry in `evals/promptfooconfig.yaml`:
 
 When evals fail in CI:
 
-1. A GitHub issue is opened with failure details
+1. The promptfoo action posts a comment on the PR with pass/fail results
 2. Failures indicate the agent prompt or tool descriptions need improvement
 3. Common fixes:
    - **Wrong tool called** → improve tool descriptions
@@ -63,4 +63,4 @@ When evals fail in CI:
 
 ## Rate Limits
 
-GitHub Models API has rate limits (15 req/min on free tier). The `--delay 5000` flag spaces requests 5 seconds apart to stay within limits.
+GitHub Models API rate limits vary by model and plan (RPM, RPD, tokens-per-request, concurrent requests). The `--delay 5000` flag spaces requests ~5 seconds apart which works well for typical free-tier limits. Adjust the delay based on your account's rate limits — check response headers (`x-ratelimit-remaining`) or the [GitHub Models documentation](https://docs.github.com/en/github-models) for current values.
