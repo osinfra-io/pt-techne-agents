@@ -165,95 +165,30 @@ Open PR 1 first, then immediately open PR 2, PR 3 (docs), and any applicable Cor
 
 ---
 
-### Operation 2 — Add or remove a member
+### Mutation operations (2–9, 11)
 
-**Pre-fill from startup:** If they're adding themselves, skip asking for username/email — just confirm which group.
+All mutations follow the same pattern:
 
-**Ask:**
-1. Which **team key**? If their startup context shows only one team, default to that and confirm.
-2. Which **group**? Parent team (maintainers/members), a child team (any of the four standards or a custom one), Datadog (admins/members), Google basic group (admin/reader/writer × owners/managers/members), or — if `platform_managed_project.kubernetes_engine` is configured — the artifact registry readers/writers groups.
-3. **Add or remove?**
-4. **Username(s) or email(s)?** — skip if adding themselves.
+1. **Determine team key** — if the user's startup context shows only one team, default to it and confirm.
+2. **Read current state** — fetch `teams/{team-key}.tfvars` via `get_file_contents` to understand what exists.
+3. **Ask operation-specific questions** — see reference below.
+4. **Show change summary** — confirm with the user before proceeding.
+5. **Build the complete spec** and call `open_team_pr`. Always pass the **full** spec — never a partial delta.
+6. **PR branch:** `update/{team-key}` unless noted otherwise.
 
-Read `teams/{team-key}.tfvars` to show the current list before proceeding. When removing a maintainer, warn if it would leave the group with zero maintainers and ask for a replacement.
+#### Operation reference
 
-**PR:** branch `update/{team-key}`, title `"Update {team-key}: add/remove member from {group}"`.
-
----
-
-### Operation 3 — Add a repository
-
-**Ask:**
-1. Which **team key**?
-2. **Repository name** — must equal team key or `{team-key}-{suffix}`.
-3. **Description** — suggest based on the repo name pattern (same rules as the GitHub repositories step under Operation 1), then confirm.
-4. **Topics** — auto-include team key and team-type topic; ask for additional technology topics.
-5. **Push allowances** — default `osinfra-io/{team-key}`.
-6. **Feature flags** — `enable_datadog_webhook` (default true), `enable_datadog_secrets`, `enable_google_wif_service_account`, `enable_ruleset` (default true).
-7. **Pages** — only if the repo publishes a GitHub Pages site; ask `build_type`, optional `cname`, and if `legacy` ask `source.branch` and optional `source.path`.
-8. **Environments** — ask if they need deployment protection; if yes, follow the environments sub-flow.
-
-Read `teams/{team-key}.tfvars` to see if the repo already exists. If it does, tell the user and offer to update it instead.
-
-**PR:** branch `update/{team-key}`, title `"Update {team-key}: add repository {repo-name}"`.
-
----
-
-### Operation 4 — Remove a repository
-
-Ask which team key and which repository. Read `teams/{team-key}.tfvars`, show what will be removed, and ask for explicit confirmation. **PR:** branch `update/{team-key}`, title `"Update {team-key}: remove repository {repo-name}"`.
-
----
-
-### Operation 5 — Add a GitHub environment
-
-**Ask:** team key + repository, **environment key** (e.g. `sandbox`, `production`, `non-production-us-east1-b`), **display name** (e.g. `"Sandbox"`, `"Production: Main"`), **reviewer teams** (default `{team-key}-{env}-approvers`), and whether to **restrict to protected branches** (default yes). Read `teams/{team-key}.tfvars` and show current environments on that repo so they can confirm the key doesn't collide.
-
-**PR:** branch `update/{team-key}`, title `"Update {team-key}: add environment {env-key} to {repo-name}"`.
-
----
-
-### Operation 6 — Remove a GitHub environment
-
-Ask for team key, repository, environment key. Read `teams/{team-key}.tfvars`, show the environment config, and ask for explicit confirmation. **PR:** branch `update/{team-key}`, title `"Update {team-key}: remove environment {env-key} from {repo-name}"`.
-
----
-
-### Operation 7 — Enable or disable a feature flag
-
-**Ask:**
-1. Which **team key**?
-2. Which **flag**? Present a menu of applicable flags:
-   - **Team-level:** `enable_workflows`, `enable_opentofu_state_management`
-   - **Platform-managed project:** `enable_datadog` and `enable_datadog_apm` (only shown if a `platform_managed_project` block exists; `enable_datadog_apm` only if `enable_datadog = true` and `kubernetes_engine` is configured)
-   - **Google project-level:** `google_project_enable_datadog` (only shown if `enable_google_project = true`)
-   - **Repository-level:** which repo, then `enable_datadog_webhook`, `enable_datadog_secrets`, `enable_google_wif_service_account`, `enable_ruleset`
-3. **Enable or disable?**
-
-Read `teams/{team-key}.tfvars`, show the current value, and confirm the change.
-
-**Conversation-time dependency warnings:**
-- `enable_opentofu_state_management = true` requires `enable_workflows = true`.
-- `enable_google_wif_service_account = true` requires `enable_workflows = true` at the team level.
-- Warn if disabling `enable_workflows` while either dependent flag is still enabled.
-- For `enable_datadog` (Kubernetes-level or Google project-level): Datadog integration is managed by the platform and may not be active in all environments.
-- For `enable_datadog_apm`: APM also enables Universal Service Monitoring (USM) for free; warn that disabling it removes trace instrumentation and USM for the team's cluster.
-
-(Schema-enforced rules will also be caught by `open_team_pr`; surface them early in conversation when you can.)
-
-**PR:** branch `update/{team-key}`, title `"Update {team-key}: {enable/disable} {flag-name}"`.
-
----
-
-### Operation 8 — Add a Google Cloud Platform project
-
-Ask for the team key, optional GCP API services (comma-separated, e.g. `bigquery.googleapis.com`), and whether to enable Datadog Google Cloud integration (default no). Read `teams/{team-key}.tfvars`, check that `enable_google_project` is not already `true`, then set `enable_google_project = true` and add `google_project_services` / `google_project_enable_datadog` as collected. **PR:** branch `update/{team-key}`, title `"Update {team-key}: add Google Cloud Platform project"`.
-
----
-
-### Operation 9 — Remove a Google Cloud Platform project
-
-Ask which team key. Read `teams/{team-key}.tfvars`, show the current project config, and ask for explicit confirmation — warn that Corpus will destroy the GCP project on the next apply. Set `enable_google_project = false` and drop `google_project_services` / `google_project_enable_datadog`. **PR:** branch `update/{team-key}`, title `"Update {team-key}: remove Google Cloud Platform project"`.
+| # | Trigger | Key questions | Warnings / special behaviour | PR title |
+|---|---------|---------------|------------------------------|----------|
+| 2 | Add/remove member | Which group? (parent team, child team, Datadog, Google group, artifact registry) · Add or remove? · Username(s) or email(s)? | Warn if removing the last maintainer. Pre-fill the user's own identity when adding themselves. | `"Update {team-key}: add/remove member from {group}"` |
+| 3 | Add repository | Repo name · description · topics · push allowances · feature flags · Pages? · environments? | Name must equal team key or `{team-key}-{suffix}`. Check repo doesn't already exist. | `"Update {team-key}: add repository {repo-name}"` |
+| 4 | Remove repository | Which repo? | Show what will be removed; require explicit confirmation. | `"Update {team-key}: remove repository {repo-name}"` |
+| 5 | Add GitHub environment | Repo · env key · display name · reviewer teams · branch policy | Check key doesn't collide with existing environments. Default reviewers: `{team-key}-{env}-approvers`. | `"Update {team-key}: add environment {env-key} to {repo-name}"` |
+| 6 | Remove GitHub environment | Repo · env key | Show config; require explicit confirmation. | `"Update {team-key}: remove environment {env-key} from {repo-name}"` |
+| 7 | Enable/disable feature flag | Which flag? (menu: team-level, project-level, repo-level) · Enable or disable? | Dependency warnings: `enable_opentofu_state_management` requires `enable_workflows`; `enable_google_wif_service_account` requires `enable_workflows`; `enable_datadog_apm` requires `enable_datadog` + `kubernetes_engine`. | `"Update {team-key}: {enable/disable} {flag-name}"` |
+| 8 | Add GCP project | Optional API services · enable Datadog? | Check `enable_google_project` not already true. | `"Update {team-key}: add Google Cloud Platform project"` |
+| 9 | Remove GCP project | (just team key) | Warn: Corpus will destroy the GCP project on next apply. Require explicit confirmation. | `"Update {team-key}: remove Google Cloud Platform project"` |
+| 11 | Add Cloud SQL | Regions (`us-east1`/`us-east4`) · database version (default `POSTGRES_16`) · machine tier (default `db-f1-micro`) | If `platform_managed_project` missing, ask to add it. Show existing config if `cloud_sql` already set. | `"Update {team-key}: add Cloud SQL"` |
 
 ---
 
@@ -287,14 +222,6 @@ Read `teams/{team-key}.tfvars`. Check the location doesn't already exist.
 2. In the Available Slots tab: remove the `<NetworkCard>` whose `primary` matches the claimed primary CIDR.
 3. Update both tab label counts: increment Active Clusters by 1, decrement Available Slots by 1.
 4. Branch `update/{team-key}-{location}-cidr`, title `"Claim CIDR slot for {team-key}-{location}"`.
-
----
-
-### Operation 11 — Add Cloud SQL
-
-Ask for: team key, **regions** (`us-east1`, `us-east4`, or both), **database version** (default `POSTGRES_16`; only change if explicitly requested), **machine tier** (default `db-f1-micro`; suggest `db-custom-2-13312` for production-grade workloads). Read `teams/{team-key}.tfvars`. If `platform_managed_project` is missing, inform the user and ask if they'd like to add it. If `cloud_sql` is already set, show the current config and ask whether to update.
-
-**PR:** branch `update/{team-key}`, title `"Update {team-key}: add Cloud SQL"`.
 
 ---
 
