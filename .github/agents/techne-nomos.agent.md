@@ -209,13 +209,8 @@ Call `get_team` with the team key. Check the location doesn't already exist.
 
 **Auto-populate subnet ranges** — do not ask the user for CIDRs:
 
-1. Call `list_teams` to get all team keys, then `get_team` for each to collect every CIDR (`ip_cidr_range`, `pod_ip_cidr_range`, `services_ip_cidr_range`, `master_ipv4_cidr_block`) and determine which slots are already allocated.
-2. Use the IPAM sequence to find the lowest unallocated slot:
-   - **Primary** (`ip_cidr_range`): `10.60.0.0/20`, `10.60.16.0/20`, `10.60.32.0/20`, … (increment by /20)
-   - **Pods** (`pod_ip_cidr_range`): `10.0.0.0/15`, `10.2.0.0/15`, `10.4.0.0/15`, … (increment by /15)
-   - **Services** (`services_ip_cidr_range`): `10.61.224.0/20`, `10.61.240.0/20`, `10.62.0.0/20`, … (increment by /20)
-   - **Master** (`master_ipv4_cidr_block`): `10.63.192.0/28`, `10.63.192.16/28`, `10.63.192.32/28`, … (increment by /28)
-3. Present the suggested ranges to the user for confirmation before including them in the spec.
+1. Call `next_available_cidrs` with `count` equal to the number of locations being added (usually 1).
+2. Present the returned CIDRs to the user for confirmation before including them in the spec.
 
 `enable_gke_hub_host` — always `false`; only `pt-pneuma` manages the fleet host cluster. Preserve existing `enable_datadog` and `enable_datadog_apm` values.
 
