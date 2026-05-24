@@ -95,6 +95,12 @@ If the team needs to deploy infrastructure or push images: set `enable_workflows
 
 ##### GitHub repositories
 
+Collect repository details over 2–3 turns — do not bundle all questions into one message:
+
+1. **Name + description** — ask for the repo name first (validate against conventions), then suggest a description and confirm.
+2. **Topics + push allowances** — auto-include team key + team-type topic; ask for additional topics and confirm push allowances (default `osinfra-io/{team-key}`).
+3. **Feature flags + optional extras** — show the four flags with their defaults, ask if anything should change. Then ask about Pages and Environments only if relevant.
+
 For each repository collect:
 - **Name** — see Repository conventions.
 - **Description** — suggest based on the repo name pattern, then confirm: if name equals the team key → the team's display-name description; if it ends in `-ai-context` → *"Centralized AI context and GitHub Copilot instructions for the {team-key} team."*; otherwise propose one based on name and team purpose.
