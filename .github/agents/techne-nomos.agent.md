@@ -137,23 +137,23 @@ Before creating any files, show a formatted summary of everything collected and 
 **New team onboarding opens two PRs in sequence on `pt-logos`, plus additional PRs on other repos.**
 
 **PR 1 — Create the GitHub environment**:
-- Call `get_team("pt-logos")` to obtain the current pt-logos spec as JSON. Add `{team-key-without-prefix}-production` to `github_repositories["pt-logos"].environments` on that spec object. The spec must remain complete — do not pass a partial or delta object. Then call `pt-techne-mcp-server/open_team_pr` with the modified spec. Note the `action` and branch name it returns.
+- Call `get_team("pt-logos")` to obtain the current pt-logos spec as JSON. Add `{team-key-without-prefix}-production` to `github_repositories["pt-logos"].environments` on that spec object. The spec must remain complete — do not pass a partial or delta object. Then call `pt-techne-mcp-server/open_team_pr` with the modified spec, `branch: "onboard/{team-key}-environment"`, and `labels: ["nomos"]`. Note the `action` and branch name it returns.
 
 **PR 2 — Onboard the team**:
-1. Build the spec for the new team, then call `pt-techne-mcp-server/open_team_pr` with that spec. Note the branch name it returns.
+1. Build the spec for the new team, then call `pt-techne-mcp-server/open_team_pr` with that spec, `branch: "onboard/{team-key}"`, and `labels: ["nomos"]`. Note the branch name it returns.
 2. Push `production.yml` (with `{team-key}` inserted into `jobs.main.strategy.matrix.teams` in alphabetical order) to that branch using `push_files`.
 
-**PR 3 — Docs** (`osinfra-io/pt-ekklesia-docs`): call `pt-techne-mcp-server/open_team_docs_pr` with the team spec — it creates the team page, updates the section index card, and patches `sidebars.js` in one call. Note the branch name it returns.
+**PR 3 — Docs** (`osinfra-io/pt-ekklesia-docs`): call `pt-techne-mcp-server/open_team_docs_pr` with the team spec, `branch: "onboard/{team-key}-docs"`, and `labels: ["nomos"]` — it creates the team page, updates the section index card, and patches `sidebars.js` in one call. Note the branch name it returns.
 
 **If GKE clusters are configured** (any team type): after `open_team_docs_pr` returns, push the `docs/platform-grouping/corpus/networking.md` update to the same branch using `push_files` — follow the Active Clusters / Available Slots / tab-count edits described in **Operation 10** for each new cluster location.
 
 **Corpus PR** (`osinfra-io/pt-corpus`): branch `onboard/{team-key}-corpus`, title `"Update pt-corpus: add {team-key} logos workspace"` — open only if **GKE clusters are configured OR additional Google Cloud Platform projects are being created**:
 1. Call `pt-techne-mcp-server/render_corpus_helpers` with the team key — returns patched `helpers.tofu` bytes with `"{team-key}-main-production"` inserted into `logos_workspaces`.
-2. Create the branch, push the returned bytes to `helpers.tofu`, and open the PR.
+2. Create the branch, push the returned bytes to `helpers.tofu`, and open the PR with label `nomos`.
 
 **Pneuma PR** (`osinfra-io/pt-pneuma`): branch `onboard/{team-key}-pneuma`, title `"Update pt-pneuma: add {team-key} logos workspace"` — open only if **GKE clusters are configured**:
 1. Call `pt-techne-mcp-server/render_pneuma_helpers` with the team key — returns patched `helpers.tofu` bytes with `"{team-key}-main-production"` inserted into `logos_workspaces`.
-2. Create the branch, push the returned bytes to all `helpers.tofu` paths (`helpers.tofu`, `regional/cert-manager/istio-csr/helpers.tofu`, `regional/datadog/helpers.tofu`, `regional/datadog/manifests/helpers.tofu`, `regional/istio/helpers.tofu`, `regional/opa-gatekeeper/constraints/helpers.tofu`, `regional/opa-gatekeeper/helpers.tofu`, `regional/opa-gatekeeper/shared/helpers.tofu`, `regional/opa-gatekeeper/templates/helpers.tofu`) in a single `push_files` call, and open the PR.
+2. Create the branch, push the returned bytes to all `helpers.tofu` paths (`helpers.tofu`, `regional/cert-manager/istio-csr/helpers.tofu`, `regional/datadog/helpers.tofu`, `regional/datadog/manifests/helpers.tofu`, `regional/istio/helpers.tofu`, `regional/opa-gatekeeper/constraints/helpers.tofu`, `regional/opa-gatekeeper/helpers.tofu`, `regional/opa-gatekeeper/shared/helpers.tofu`, `regional/opa-gatekeeper/templates/helpers.tofu`) in a single `push_files` call, and open the PR with label `nomos`.
 
 Open PR 1 first, then immediately open PR 2, PR 3 (docs), and any applicable Corpus/Pneuma PRs in parallel. Make clear to the user that **PR 1 must be reviewed and merged before PR 2** — the GitHub environment it creates gates the production deployment that fires when PR 2 merges. Other PRs are independent and can be merged in any order, but Corpus and Pneuma should be merged after the logos deployment completes (after PR 2 merges and the workflow finishes).
 
@@ -169,7 +169,7 @@ All mutations follow the same pattern:
 2. **Read current state** — call `get_team` with the team key to get the parsed spec as JSON.
 3. **Ask operation-specific questions** — see reference below.
 4. **Show change summary** — confirm with the user before proceeding.
-5. **Build the complete spec** and call `open_team_pr`. Always pass the **full** spec — never a partial delta.
+5. **Build the complete spec** and call `open_team_pr` with `branch: "update/{team-key}"` and `labels: ["nomos"]`. Always pass the **full** spec — never a partial delta.
 6. **PR branch:** `update/{team-key}` unless noted otherwise.
 
 #### Operation reference
@@ -188,7 +188,7 @@ All mutations follow the same pattern:
 
 ### Operation 12 — Open a GitHub issue
 
-Ask for: title, type (bug/enhancement/question), and description. Create on `osinfra-io/pt-logos` using `issue_write` with the appropriate label (`bug`, `enhancement`, or `question`). No branch or PR needed.
+Ask for: title, type (bug/enhancement/question), and description. Create on `osinfra-io/pt-logos` using `issue_write` with the appropriate label (`bug`, `enhancement`, or `question`) plus the `nomos` label. No branch or PR needed.
 
 ---
 
@@ -233,7 +233,7 @@ If a platform tool fails for reasons other than validation (timeout, transport e
 
 **For any change that touches a `teams/*.tfvars` file on `osinfra-io/pt-logos`:**
 
-Do **not** call `search_pull_requests` before `open_team_pr` — it handles idempotency internally. Call `pt-techne-mcp-server/open_team_pr` with the complete team spec — it handles validation, rendering, branch creation, pushing, and opening the PR in one call. If validation fails, it returns structured errors (each has `path` and `message`) — surface them, ask the user to correct the input, and retry.
+Do **not** call `search_pull_requests` before `open_team_pr` — it handles idempotency internally. Call `pt-techne-mcp-server/open_team_pr` with the complete team spec — it handles validation, rendering, branch creation, pushing, and opening the PR in one call. Always pass `labels: ["nomos"]` and the appropriate `branch` (see Branch naming below). If validation fails, it returns structured errors (each has `path` and `message`) — surface them, ask the user to correct the input, and retry.
 
 Inspect the full response before pushing additional files:
 - If `action` is **not** `noop` — a feature branch was created or updated. Use the returned branch name to push any additional files (e.g. `production.yml` for PR 2) with `push_files`.
@@ -241,7 +241,7 @@ Inspect the full response before pushing additional files:
 
 **For changes to `osinfra-io/pt-ekklesia-docs` (team index + sidebar):**
 
-Do **not** call `search_pull_requests` before `open_team_docs_pr` — it handles idempotency internally. Call `pt-techne-mcp-server/open_team_docs_pr` with the team spec. Same `action` / `noop` logic as above applies for pushing additional docs files.
+Do **not** call `search_pull_requests` before `open_team_docs_pr` — it handles idempotency internally. Call `pt-techne-mcp-server/open_team_docs_pr` with the team spec. Always pass `labels: ["nomos"]` and the appropriate `branch`. Same `action` / `noop` logic as above applies for pushing additional docs files.
 
 **For Corpus and Pneuma helpers.tofu changes:**
 
@@ -252,7 +252,7 @@ Use `pt-techne-mcp-server/render_corpus_helpers` or `render_pneuma_helpers` to g
    - **Exists:** reuse that branch. Do not `create_branch` or `create_pull_request`.
    - **Doesn't exist:** `create_branch` off `main`.
 2. `push_files` — single commit with all changed files.
-3. **New-PR path only:** `create_pull_request` from feature branch → `main`.
+3. **New-PR path only:** `create_pull_request` from feature branch → `main` with label `nomos`.
 
 **Branch naming:** `onboard/{team-key}` (onboarding), `onboard/{team-key}-environment` (env PR), `onboard/{team-key}-docs` (docs), `onboard/{team-key}-corpus` (Corpus), `onboard/{team-key}-pneuma` (Pneuma), `update/{team-key}` (all other changes).
 
