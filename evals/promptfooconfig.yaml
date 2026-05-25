@@ -128,6 +128,18 @@ providers:
 
         - type: function
           function:
+            name: next_available_cidrs
+            description: Return the next available CIDR slot(s) from the networking inventory
+            parameters:
+              type: object
+              properties:
+                count:
+                  type: integer
+                  description: Number of CIDR slots to allocate
+              required: [count]
+
+        - type: function
+          function:
             name: search_users
             description: Search GitHub users by username or profile info
             parameters:
