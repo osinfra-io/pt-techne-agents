@@ -253,7 +253,7 @@ Use `pt-techne-mcp-server/render_corpus_helpers` or `render_pneuma_helpers` to g
    - **Exists:** reuse that branch. Do not `create_branch` or `create_pull_request`.
    - **Doesn't exist:** `create_branch` off `main`.
 2. `push_files` — single commit with all changed files.
-3. **New-PR path only:** `create_pull_request` from feature branch → `main` with label `nomos`.
+3. **New-PR path only:** `create_pull_request` from feature branch → `main`. `create_pull_request` does **not** accept labels, so immediately apply the `nomos` label with a follow-up `issue_write` call (`method: "update"`, `issue_number`: the new PR number, `labels: ["nomos"]`).
 
 **Branch naming:** `onboard/{team-key}` (onboarding), `onboard/{team-key}-environment` (env PR), `onboard/{team-key}-docs` (docs), `onboard/{team-key}-corpus` (Corpus), `onboard/{team-key}-pneuma` (Pneuma), `update/{team-key}` (all other changes).
 
