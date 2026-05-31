@@ -116,6 +116,29 @@ providers:
 
         - type: function
           function:
+            name: open_team_helpers_pr
+            description: Open or update a PR in both pt-corpus and pt-pneuma inserting the team workspace into helpers.tofu logos_workspaces
+            parameters:
+              type: object
+              properties:
+                team_key:
+                  type: string
+                  description: The team key
+                branch:
+                  type: string
+                  description: Optional branch name override
+                message:
+                  type: string
+                  description: Optional PR title override
+                labels:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional labels to apply to the PRs
+              required: [team_key]
+
+        - type: function
+          function:
             name: next_available_cidrs
             description: Return the next available CIDR slot(s) from the networking inventory
             parameters:
