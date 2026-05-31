@@ -104,20 +104,8 @@ providers:
 
         - type: function
           function:
-            name: render_corpus_helpers
-            description: Render patched corpus helpers.tofu with a team workspace inserted
-            parameters:
-              type: object
-              properties:
-                team_key:
-                  type: string
-                  description: The team key
-              required: [team_key]
-
-        - type: function
-          function:
-            name: render_pneuma_helpers
-            description: Render patched pneuma helpers.tofu with a team workspace inserted
+            name: render_team_helpers
+            description: Render patched helpers.tofu for both pt-corpus and pt-pneuma with a team workspace inserted
             parameters:
               type: object
               properties:
