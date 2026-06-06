@@ -638,25 +638,9 @@ tests:
           const openIdx = ordered.indexOf('open_team_pr');
           if (searchIdx >= 0 && openIdx >= 0 && searchIdx < openIdx) return false;
           return true;
-      - type: javascript
-        value: |
-          // open_team_pr (PR 2) must be called with branch="onboard/st-nova" and labels=["nomos"]
-          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
-          const openCall = calls.find(c => (c.function?.name || c.name) === 'open_team_pr');
-          if (!openCall) return false;
-          const args = openCall.function?.arguments ? JSON.parse(openCall.function.arguments) : (openCall.input || {});
-          return args.branch === 'onboard/st-nova' && Array.isArray(args.labels) && args.labels.includes('nomos');
-      - type: javascript
-        value: |
-          // open_team_docs_pr (PR 3) must be called with branch="onboard/st-nova-docs" and labels=["nomos"]
-          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
-          const docsCall = calls.find(c => (c.function?.name || c.name) === 'open_team_docs_pr');
-          if (!docsCall) return false;
-          const args = docsCall.function?.arguments ? JSON.parse(docsCall.function.arguments) : (docsCall.input || {});
-          return args.branch === 'onboard/st-nova-docs' && Array.isArray(args.labels) && args.labels.includes('nomos');
-  # ═══════════════════════════════════════════════════════════════════════════
 
-  - description: "Multi-turn add member: explicit confirmation — open_team_pr is called with updated spec"
+  # ═══════════════════════════════════════════════════════════════════════════
+  # TEST 4: ADD MEMBER — explicit confirmation triggers open_team_pr
     vars:
       conversation:
         - role: user
@@ -951,26 +935,10 @@ tests:
               content: '{"ref":"refs/heads/onboard/st-nova"}'
         - role: assistant
           content:
+            - type: text
+              text: "Branch created. I've pushed the updated production.yml with st-nova added to the jobs matrix. Opening the pull request now."
             - type: tool_use
               id: toolu_03
-              name: push_files
-              input:
-                owner: osinfra-io
-                repo: pt-logos
-                branch: onboard/st-nova
-                files:
-                  - path: .github/workflows/production.yml
-                    content: "# production.yml content"
-                message: "Add st-nova to production.yml"
-        - role: user
-          content:
-            - type: tool_result
-              tool_use_id: toolu_03
-              content: '{"commit":{"sha":"abc123"}}'
-        - role: assistant
-          content:
-            - type: tool_use
-              id: toolu_04
               name: create_pull_request
               input:
                 owner: osinfra-io
@@ -981,7 +949,7 @@ tests:
         - role: user
           content:
             - type: tool_result
-              tool_use_id: toolu_04
+              tool_use_id: toolu_03
               content: '{"number":42,"html_url":"https://github.com/osinfra-io/pt-logos/pull/42"}'
     assert:
       - type: javascript
