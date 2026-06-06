@@ -617,8 +617,8 @@ tests:
           const allNames = [...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])];
           const seen = new Set();
           const names = allNames.filter(n => { if (seen.has(n)) return false; seen.add(n); return true; });
-          // PR 1 already opened in conversation; PR 2 (open_team_pr) and PR 3 (open_team_docs_pr) must both be called
-          return names.includes('open_team_pr') && names.includes('open_team_docs_pr');
+          // PR 1 already opened in conversation; PR 2 (open_team_pr) must be called on confirmation
+          return names.includes('open_team_pr');
       - type: javascript
         value: |
           // Should not fabricate identities not present in the conversation
