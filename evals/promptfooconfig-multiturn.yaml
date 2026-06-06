@@ -614,21 +614,29 @@ tests:
         - role: assistant
           content:
             - type: text
-              text: I can see you're a maintainer of pt-arche. Let me load the current team spec.
+              text: I can see you're a maintainer of pt-arche. Let me load the current spec and verify charlie-dev's org membership.
             - type: tool_use
               id: toolu_04
               name: get_team
               input:
                 team_key: pt-arche
+            - type: tool_use
+              id: toolu_05
+              name: search_users
+              input:
+                query: charlie-dev org:osinfra-io
         - role: user
           content:
             - type: tool_result
               tool_use_id: toolu_04
               content: >-
                 {"team_key":"pt-arche","team_type":"platform","display_name":"Arche","display_name_comment":"Infrastructure as Code modules for the osinfra.io platform","datadog":{"admin_emails":["brett@osinfra.io"]},"github_parent_team":{"maintainers":["brettcurtis"],"members":[]},"github_child_teams":{"sandbox-approvers":{"maintainers":["brettcurtis"]},"non-production-approvers":{"maintainers":["brettcurtis"]},"production-approvers":{"maintainers":["brettcurtis"]},"repository-administrators":{"maintainers":["brettcurtis"]}},"google_groups":{"admin":{"owners":["brett@osinfra.io"]},"reader":{"owners":["brett@osinfra.io"]},"writer":{"owners":["brett@osinfra.io"]}}}
+            - type: tool_result
+              tool_use_id: toolu_05
+              content: '{"total_count":1,"items":[{"login":"charlie-dev","type":"User"}]}'
         - role: assistant
           content: >-
-            Here's what I'll change for **pt-arche**:
+            ✅ `charlie-dev` is a member of the osinfra-io org. Here's what I'll change for **pt-arche**:
 
             **Add member:** `charlie-dev` → GitHub parent team (members)
 
