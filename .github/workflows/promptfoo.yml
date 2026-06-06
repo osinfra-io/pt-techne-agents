@@ -24,11 +24,21 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Promptfoo
+      - name: Promptfoo (first-turn)
         uses: promptfoo/promptfoo-action@e2b793945efd6eb3014332602598c84252eddd1f # v1.3.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           config: evals/promptfooconfig.yaml
+          disable-comment: true
+          no-share: true
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Promptfoo (multi-turn)
+        uses: promptfoo/promptfoo-action@e2b793945efd6eb3014332602598c84252eddd1f # v1.3.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          config: evals/promptfooconfig-multiturn.yaml
           disable-comment: true
           no-share: true
         env:
