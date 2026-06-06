@@ -361,7 +361,7 @@ tests:
           const hasDatadog = /datadog/i.test(text);
           const hasGitHub = /github\s+(username|maintainer|member)/i.test(text);
           const hasGoogle = /google\s+(group|cloud|identity)/i.test(text);
-          return [hasDatadog, hasGitHub, hasGoogle].filter(Boolean).length < 2;
+          return [hasDatadog, hasGitHub, hasGoogle].filter(Boolean).length === 0;
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 2: ONBOARD — all required fields collected, optional menu shown (no PR)
@@ -539,14 +539,59 @@ tests:
             Shall I go ahead?
         - role: user
           content: "Yes, go ahead and create the PRs."
+        - role: assistant
+          content:
+            - type: text
+              text: "On it! First, let me retrieve the pt-logos spec to add the GitHub environment (PR 1)."
+            - type: tool_use
+              id: toolu_10
+              name: get_team
+              input:
+                team_key: pt-logos
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_10
+              content: '{"team_key":"pt-logos","team_type":"platform","display_name":"Logos","display_name_comment":"Creates foundational platform resources","datadog_admin_email_addresses":["platform@osinfra.io"],"github_parent_team_maintainers":["admin-dev"],"google_groups_owner_email_addresses":{"admin":["platform@osinfra.io"],"reader":["platform@osinfra.io"],"writer":["platform@osinfra.io"]},"github_repositories":{"pt-logos":{"environments":["main-production"]}}}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_11
+              name: open_team_pr
+              input:
+                spec:
+                  team_key: pt-logos
+                  team_type: platform
+                  display_name: Logos
+                  display_name_comment: Creates foundational platform resources
+                  datadog_admin_email_addresses: [platform@osinfra.io]
+                  github_parent_team_maintainers: [admin-dev]
+                  google_groups_owner_email_addresses:
+                    admin: [platform@osinfra.io]
+                    reader: [platform@osinfra.io]
+                    writer: [platform@osinfra.io]
+                  github_repositories:
+                    pt-logos:
+                      environments: [main-production]
+                    st-nova:
+                      environments: [main-production]
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_11
+              content: '{"action":"created","branch":"onboard/st-nova-environment","pr_url":"https://github.com/osinfra-io/pt-logos/pull/100"}'
+            - type: text
+              text: "PR 1 is open. Please continue with PR 2 (st-nova onboarding) and PR 3 (docs) now."
     assert:
       - type: javascript
         value: |
           const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
           const raw = typeof output === 'string' ? output : JSON.stringify(output);
-          const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
-          // get_team is called to read the pt-logos spec for PR 1; open_team_pr follows
-          return names.includes('open_team_pr') || names.includes('get_team');
+          const allNames = [...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])];
+          const seen = new Set();
+          const names = allNames.filter(n => { if (seen.has(n)) return false; seen.add(n); return true; });
+          // PR 1 already opened in conversation; PR 2 (open_team_pr) and PR 3 (open_team_docs_pr) must both be called
+          return names.includes('open_team_pr') && names.includes('open_team_docs_pr');
       - type: javascript
         value: |
           // Should not fabricate identities not present in the conversation
@@ -559,9 +604,11 @@ tests:
           // search_pull_requests must not precede open_team_pr
           const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
           const raw = typeof output === 'string' ? output : JSON.stringify(output);
-          const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
-          const searchIdx = names.indexOf('search_pull_requests');
-          const openIdx = names.indexOf('open_team_pr');
+          const allNames = [...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])];
+          const seen = new Set();
+          const ordered = allNames.filter(n => { if (seen.has(n)) return false; seen.add(n); return true; });
+          const searchIdx = ordered.indexOf('search_pull_requests');
+          const openIdx = ordered.indexOf('open_team_pr');
           if (searchIdx >= 0 && openIdx >= 0 && searchIdx < openIdx) return false;
           return true;
 
@@ -648,16 +695,20 @@ tests:
         value: |
           const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
           const raw = typeof output === 'string' ? output : JSON.stringify(output);
-          const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
+          const allNames = [...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])];
+          const seen = new Set();
+          const names = allNames.filter(n => { if (seen.has(n)) return false; seen.add(n); return true; });
           return names.includes('open_team_pr');
       - type: javascript
         value: |
           // search_pull_requests must not precede open_team_pr
           const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
           const raw = typeof output === 'string' ? output : JSON.stringify(output);
-          const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
-          const searchIdx = names.indexOf('search_pull_requests');
-          const openIdx = names.indexOf('open_team_pr');
+          const allNames = [...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])];
+          const seen = new Set();
+          const ordered = allNames.filter(n => { if (seen.has(n)) return false; seen.add(n); return true; });
+          const searchIdx = ordered.indexOf('search_pull_requests');
+          const openIdx = ordered.indexOf('open_team_pr');
           if (searchIdx >= 0 && openIdx >= 0 && searchIdx < openIdx) return false;
           return true;
 
