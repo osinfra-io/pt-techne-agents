@@ -910,7 +910,7 @@ tests:
     vars:
       conversation:
         - role: user
-          content: "I'm onboarding st-nova. The logos tfvars are already up to date (open_team_pr was a noop). I pushed changes to the onboard/st-nova branch in pt-logos to add st-nova to the production.yml jobs matrix. Please open a PR for that branch and apply the nomos label."
+          content: "I'm onboarding st-nova. The open_team_pr call came back action=noop — the logos spec already matches main. But st-nova isn't in the production.yml jobs matrix yet."
         - role: assistant
           content:
             - type: text
@@ -951,7 +951,7 @@ tests:
         - role: assistant
           content:
             - type: text
-              text: "Identity confirmed — you're a pt-logos maintainer. Let me check if a PR already exists for that branch."
+              text: "Identity confirmed. I'll use the standard manual flow to open a dedicated PR for the production.yml change. Checking for an existing PR first."
             - type: tool_use
               id: toolu_04
               name: search_pull_requests
@@ -966,6 +966,95 @@ tests:
           content:
             - type: tool_use
               id: toolu_05
+              name: create_branch
+              input:
+                owner: osinfra-io
+                repo: pt-logos
+                branch: onboard/st-nova
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_05
+              content: '{"ref":"refs/heads/onboard/st-nova"}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_06
+              name: push_files
+              input:
+                owner: osinfra-io
+                repo: pt-logos
+                branch: onboard/st-nova
+                files:
+                  - path: .github/workflows/production.yml
+                    content: |
+                      name: Production
+
+                      on:
+                        workflow_dispatch:
+                        push:
+                          branches:
+                            - main
+                          paths-ignore:
+                            - "**.md"
+
+                      concurrency:
+                        group: production
+                        cancel-in-progress: false
+
+                      # For reusable workflows, the permissions setting for id-token should be set to write at the
+                      # caller workflow level or in the specific job that calls the reusable workflow.
+
+                      permissions:
+                        contents: read
+                        id-token: write
+
+                      jobs:
+                        main:
+                          name: "Team: ${{ matrix.teams }}"
+                          uses: osinfra-io/pt-techne-opentofu-workflows/.github/workflows/plan-and-apply.yml@35773c9889c3192ada62856f811225fb5410565a # v0.4.1
+                          if: github.event.head_commit.author.username != 'dependabot[bot]'
+                          strategy:
+                            fail-fast: false
+                            matrix:
+                              teams:
+                                - pt-arche
+                                - pt-corpus
+                                - pt-ekklesia
+                                - pt-kryptos
+                                - pt-logos
+                                - pt-pneuma
+                                - pt-techne
+                                - st-ethos
+                                - st-nova
+                          with:
+                            checkout_ref: ${{ github.ref }}
+                            github_environment: "Production: ${{ matrix.teams }}"
+
+                            # This service account needs to be added to the Groups Admin system role in the the Google Workspace Admin Console
+                            service_account: pt-logos-github@pt-corpus-tf16-prod.iam.gserviceaccount.com
+                            opentofu_kms_encryption_key: projects/pt-corpus-tf16-prod/locations/us/keyRings/state-encryption/cryptoKeys/default
+                            opentofu_plan_args: -var-file=teams/${{ matrix.teams }}.tfvars
+                            opentofu_state_bucket: pt-logos-state-prod
+                            opentofu_version: ${{ vars.OPENTOFU_VERSION }}
+                            opentofu_workspace: "${{ matrix.teams }}-main-production"
+                            workload_identity_provider: projects/557265520053/locations/global/workloadIdentityPools/github-actions/providers/github-actions-oidc
+
+                          secrets:
+                            opentofu_plan_secret_args: >-
+                              -var=datadog_api_key=${{ secrets.DATADOG_API_KEY }}
+                              -var=datadog_app_key=${{ secrets.DATADOG_APP_KEY }}
+                              -var=github_token=${{ secrets.TOKEN }}
+                message: "Onboard st-nova: add to production.yml jobs matrix"
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_06
+              content: '{"commit":{"sha":"a1b2c3d4e5f6789012345678901234567890abcd"}}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_07
               name: create_pull_request
               input:
                 owner: osinfra-io
@@ -976,10 +1065,8 @@ tests:
         - role: user
           content:
             - type: tool_result
-              tool_use_id: toolu_05
+              tool_use_id: toolu_07
               content: '{"number":42,"html_url":"https://github.com/osinfra-io/pt-logos/pull/42"}'
-            - type: text
-              text: "PR created. Please apply the nomos label to it now."
     assert:
       - type: javascript
         value: |
