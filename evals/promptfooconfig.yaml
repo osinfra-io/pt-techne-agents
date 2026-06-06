@@ -583,12 +583,12 @@ tests:
         value: |
           const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
           const raw = typeof output === 'string' ? output : JSON.stringify(output);
-          const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
-          const text = typeof output === 'string' ? output : (typeof output?.content === 'string' ? output.content : JSON.stringify(output?.content || ''));
-          // Acceptable: agent calls next_available_cidrs, or mentions CIDR only in the context of
+          const namesLower = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])].map(n => n.toLowerCase());
+          const textLower = (typeof output === 'string' ? output : (typeof output?.content === 'string' ? output.content : JSON.stringify(output?.content || ''))).toLowerCase();
+          // Acceptable: agent calls next_available_cidrs, or mentions cidr only in the context of
           // suggesting/confirming/automatically handling — not asking the user to supply them
-          if (names.includes('next_available_cidrs')) return true;
-          return !text.includes('CIDR') || text.includes('suggest') || text.includes('confirm') || text.includes('automat') || text.includes('allocat');
+          if (namesLower.includes('next_available_cidrs')) return true;
+          return !textLower.includes('cidr') || textLower.includes('suggest') || textLower.includes('confirm') || textLower.includes('automat') || textLower.includes('allocat');
 
   # ═══════════════════════════════════════════════════════════════════════════
   # OPERATION 11: ADD CLOUD SQL
