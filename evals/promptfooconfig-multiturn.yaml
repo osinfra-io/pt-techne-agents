@@ -910,7 +910,7 @@ tests:
     vars:
       conversation:
         - role: user
-          content: "I'm onboarding st-nova. The open_team_pr call came back action=noop — the logos spec already matches main. But st-nova isn't in the production.yml jobs matrix yet."
+          content: "I'm finishing the st-nova onboarding. The environment PR, docs PR, and helpers PRs are all already open. The logos tfvars were a noop for PR 2, but the production.yml still needs st-nova added to the jobs matrix — that's the last remaining step. Please open the PR for that change using the standard manual flow."
         - role: assistant
           content:
             - type: text
