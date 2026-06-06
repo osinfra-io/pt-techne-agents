@@ -910,68 +910,47 @@ tests:
     vars:
       conversation:
         - role: user
-          content: "I'm onboarding st-nova. The open_team_pr call came back action=noop — the logos spec already matches main. But st-nova isn't in the production.yml jobs matrix yet, so that file still needs a dedicated PR."
+          content: "I'm onboarding st-nova. The logos tfvars are already up to date (open_team_pr was a noop). I pushed changes to the onboard/st-nova branch in pt-logos to add st-nova to the production.yml jobs matrix. Please open a PR for that branch and apply the nomos label."
         - role: assistant
           content:
             - type: text
-              text: "Got it — the logos tfvars are already up to date, so I'll open a dedicated PR for the production.yml change using the standard manual flow. Let me check if one already exists."
+              text: "Got it! Let me look you up and check if a PR already exists for that branch."
             - type: tool_use
               id: toolu_01
+              name: get_me
+              input: {}
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_01
+              content: '{"login":"brettcurtis","email":"brett@osinfra.io"}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_02
               name: search_pull_requests
               input:
                 query: "repo:osinfra-io/pt-logos head:onboard/st-nova is:open"
         - role: user
           content:
             - type: tool_result
-              tool_use_id: toolu_01
+              tool_use_id: toolu_02
               content: '{"total_count":0,"items":[]}'
         - role: assistant
           content:
             - type: tool_use
-              id: toolu_02
-              name: create_branch
-              input:
-                owner: osinfra-io
-                repo: pt-logos
-                branch: onboard/st-nova
-        - role: user
-          content:
-            - type: tool_result
-              tool_use_id: toolu_02
-              content: '{"ref":"refs/heads/onboard/st-nova"}'
-        - role: assistant
-          content:
-            - type: tool_use
               id: toolu_03
-              name: push_files
-              input:
-                owner: osinfra-io
-                repo: pt-logos
-                branch: onboard/st-nova
-                files:
-                  - path: .github/workflows/production.yml
-                    content: "name: Production Deployment\n\non:\n  workflow_run:\n    workflows: [\"Non-Production Deployment\"]\n    types: [completed]\n    branches: [main]\n\njobs:\n  st-nova:\n    name: st-nova\n    uses: osinfra-io/pt-techne-opentofu-workflows/.github/workflows/tofu-plan-apply.yml@main\n    with:\n      workspace: st-nova-main-production\n    secrets: inherit\n"
-                message: "Onboard st-nova: add to production.yml jobs matrix"
-        - role: user
-          content:
-            - type: tool_result
-              tool_use_id: toolu_03
-              content: '{"commit":{"sha":"a1b2c3d4"}}'
-        - role: assistant
-          content:
-            - type: tool_use
-              id: toolu_04
               name: create_pull_request
               input:
                 owner: osinfra-io
                 repo: pt-logos
-                title: "Onboard st-nova: update production.yml"
+                title: "Onboard st-nova: add to production.yml jobs matrix"
                 head: onboard/st-nova
                 base: main
         - role: user
           content:
             - type: tool_result
-              tool_use_id: toolu_04
+              tool_use_id: toolu_03
               content: '{"number":42,"html_url":"https://github.com/osinfra-io/pt-logos/pull/42"}'
     assert:
       - type: javascript
