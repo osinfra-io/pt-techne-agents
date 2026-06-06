@@ -914,7 +914,7 @@ tests:
         - role: assistant
           content:
             - type: text
-              text: "Got it! Let me look you up and check if a PR already exists for that branch."
+              text: "Got it! Let me look you up first."
             - type: tool_use
               id: toolu_01
               name: get_me
@@ -928,18 +928,44 @@ tests:
           content:
             - type: tool_use
               id: toolu_02
+              name: lookup_user
+              input:
+                github_username: brettcurtis
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_02
+              content: '{"matches":[{"team_key":"pt-logos","roles":["github_parent_team.maintainers"]}]}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_03
+              name: lookup_user
+              input:
+                email: brett@osinfra.io
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_03
+              content: '{"matches":[{"team_key":"pt-logos","roles":["google_groups.admin.owners"]}]}'
+        - role: assistant
+          content:
+            - type: text
+              text: "Identity confirmed — you're a pt-logos maintainer. Let me check if a PR already exists for that branch."
+            - type: tool_use
+              id: toolu_04
               name: search_pull_requests
               input:
                 query: "repo:osinfra-io/pt-logos head:onboard/st-nova is:open"
         - role: user
           content:
             - type: tool_result
-              tool_use_id: toolu_02
+              tool_use_id: toolu_04
               content: '{"total_count":0,"items":[]}'
         - role: assistant
           content:
             - type: tool_use
-              id: toolu_03
+              id: toolu_05
               name: create_pull_request
               input:
                 owner: osinfra-io
@@ -950,7 +976,7 @@ tests:
         - role: user
           content:
             - type: tool_result
-              tool_use_id: toolu_03
+              tool_use_id: toolu_05
               content: '{"number":42,"html_url":"https://github.com/osinfra-io/pt-logos/pull/42"}'
     assert:
       - type: javascript
