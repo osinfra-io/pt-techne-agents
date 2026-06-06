@@ -978,6 +978,8 @@ tests:
             - type: tool_result
               tool_use_id: toolu_05
               content: '{"number":42,"html_url":"https://github.com/osinfra-io/pt-logos/pull/42"}'
+            - type: text
+              text: "PR created. Please apply the nomos label to it now."
     assert:
       - type: javascript
         value: |
