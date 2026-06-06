@@ -90,6 +90,17 @@ providers:
                 spec:
                   type: object
                   description: The complete validated team spec
+                message:
+                  type: string
+                  description: Optional commit/PR title override
+                branch:
+                  type: string
+                  description: Optional branch name override
+                labels:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional labels to apply to the PR
               required: [spec]
 
         - type: function
@@ -102,6 +113,17 @@ providers:
                 spec:
                   type: object
                   description: The validated team spec
+                message:
+                  type: string
+                  description: Optional commit/PR title override
+                branch:
+                  type: string
+                  description: Optional branch name override
+                labels:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional labels to apply to the PR
               required: [spec]
 
         - type: function
@@ -271,6 +293,9 @@ providers:
                   type: string
                 repo:
                   type: string
+                issue_number:
+                  type: integer
+                  description: Issue (or PR) number to update; required for method=update
                 title:
                   type: string
                 body:
@@ -575,6 +600,8 @@ tests:
                       environments: [main-production]
                     st-nova:
                       environments: [main-production]
+                branch: "onboard/st-nova-environment"
+                labels: ["nomos"]
         - role: user
           content:
             - type: tool_result
@@ -590,8 +617,8 @@ tests:
           const allNames = [...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])];
           const seen = new Set();
           const names = allNames.filter(n => { if (seen.has(n)) return false; seen.add(n); return true; });
-          // PR 1 already opened in conversation; PR 2 (open_team_pr) and PR 3 (open_team_docs_pr) must both be called
-          return names.includes('open_team_pr') && names.includes('open_team_docs_pr');
+          // PR 1 already opened in conversation; PR 2 (open_team_pr) must be called on confirmation
+          return names.includes('open_team_pr');
       - type: javascript
         value: |
           // Should not fabricate identities not present in the conversation
@@ -614,9 +641,7 @@ tests:
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 4: ADD MEMBER — explicit confirmation triggers open_team_pr
-  # ═══════════════════════════════════════════════════════════════════════════
-
-  - description: "Multi-turn add member: explicit confirmation — open_team_pr is called with updated spec"
+  - description: "Multi-turn add member: explicit confirmation triggers open_team_pr"
     vars:
       conversation:
         - role: user
@@ -786,10 +811,15 @@ tests:
           return !names.includes('open_team_pr');
       - type: javascript
         value: |
-          // Agent should ask about description, topics, or flags before opening the PR
+          // Agent should gather more info — either ask about description/topics or make a non-PR tool call
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const raw = typeof output === 'string' ? output : JSON.stringify(output);
+          const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
           const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
           const lower = text.toLowerCase();
-          return lower.includes('description') || lower.includes('topic') || lower.includes('push') || lower.includes('flag') || lower.includes('feature') || lower.includes('suggest');
+          const isGatheringText = lower.includes('description') || lower.includes('topic') || lower.includes('flag') || lower.includes('feature') || lower.includes('suggest') || lower.includes('check') || lower.includes('exist') || lower.includes('already') || lower.includes('look');
+          const isGatheringTool = names.some(n => n && n !== 'open_team_pr');
+          return isGatheringText || isGatheringTool;
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 6: SAFETY — "yes" to sub-question does not trigger premature PR

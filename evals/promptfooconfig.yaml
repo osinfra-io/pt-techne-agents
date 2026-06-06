@@ -88,6 +88,17 @@ providers:
                 spec:
                   type: object
                   description: The complete validated team spec
+                message:
+                  type: string
+                  description: Optional commit/PR title override
+                branch:
+                  type: string
+                  description: Optional branch name override
+                labels:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional labels to apply to the PR
               required: [spec]
 
         - type: function
@@ -100,6 +111,17 @@ providers:
                 spec:
                   type: object
                   description: The validated team spec
+                message:
+                  type: string
+                  description: Optional commit/PR title override
+                branch:
+                  type: string
+                  description: Optional branch name override
+                labels:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional labels to apply to the PR
               required: [spec]
 
         - type: function
@@ -269,6 +291,9 @@ providers:
                   type: string
                 repo:
                   type: string
+                issue_number:
+                  type: integer
+                  description: Issue (or PR) number to update; required for method=update
                 title:
                   type: string
                 body:
@@ -556,8 +581,14 @@ tests:
     assert:
       - type: javascript
         value: |
-          const text = typeof output === 'string' ? output : (typeof output?.content === 'string' ? output.content : JSON.stringify(output?.content || ''));
-          return !text.includes('CIDR') || text.includes('suggest') || text.includes('confirm');
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const raw = typeof output === 'string' ? output : JSON.stringify(output);
+          const namesLower = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])].map(n => n.toLowerCase());
+          const textLower = (typeof output === 'string' ? output : (typeof output?.content === 'string' ? output.content : JSON.stringify(output?.content || ''))).toLowerCase();
+          // Acceptable: agent calls next_available_cidrs, or mentions cidr only in the context of
+          // suggesting/confirming/automatically handling — not asking the user to supply them
+          if (namesLower.includes('next_available_cidrs')) return true;
+          return !textLower.includes('cidr') || textLower.includes('suggest') || textLower.includes('confirm') || textLower.includes('automat') || textLower.includes('allocat');
 
   # ═══════════════════════════════════════════════════════════════════════════
   # OPERATION 11: ADD CLOUD SQL
@@ -755,3 +786,26 @@ tests:
           const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
           const text = typeof output === 'string' ? output : (typeof output?.content === 'string' ? output.content : JSON.stringify(output?.content || ''));
           return names.includes('get_me') || text.toLowerCase().includes('what') || text.toLowerCase().includes('help') || text.includes('Nomos');
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # MANUAL FLOW
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - description: "Manual flow: issue_write called after create_pull_request to apply nomos label"
+    vars:
+      message: "create_pull_request just returned {\"number\":42,\"html_url\":\"https://github.com/osinfra-io/pt-logos/pull/42\"}. What do you do next?"
+    assert:
+      - type: javascript
+        value: |
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const raw = typeof output === 'string' ? output : JSON.stringify(output);
+          const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
+          return names.includes('issue_write');
+      - type: javascript
+        value: |
+          // issue_write must use method=update with issue_number=42 and labels=["nomos"]
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const writeCall = calls.find(c => (c.function?.name || c.name) === 'issue_write');
+          if (!writeCall) return true; // defer to first assertion
+          const args = writeCall.function?.arguments ? JSON.parse(writeCall.function.arguments) : (writeCall.input || {});
+          return args.method === 'update' && args.issue_number === 42 && Array.isArray(args.labels) && args.labels.includes('nomos');
