@@ -88,6 +88,17 @@ providers:
                 spec:
                   type: object
                   description: The complete validated team spec
+                message:
+                  type: string
+                  description: Optional commit/PR title override
+                branch:
+                  type: string
+                  description: Optional branch name override
+                labels:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional labels to apply to the PR
               required: [spec]
 
         - type: function
@@ -100,6 +111,17 @@ providers:
                 spec:
                   type: object
                   description: The validated team spec
+                message:
+                  type: string
+                  description: Optional commit/PR title override
+                branch:
+                  type: string
+                  description: Optional branch name override
+                labels:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional labels to apply to the PR
               required: [spec]
 
         - type: function
@@ -269,6 +291,9 @@ providers:
                   type: string
                 repo:
                   type: string
+                issue_number:
+                  type: integer
+                  description: Issue (or PR) number to update; required for method=update
                 title:
                   type: string
                 body:

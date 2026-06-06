@@ -90,6 +90,17 @@ providers:
                 spec:
                   type: object
                   description: The complete validated team spec
+                message:
+                  type: string
+                  description: Optional commit/PR title override
+                branch:
+                  type: string
+                  description: Optional branch name override
+                labels:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional labels to apply to the PR
               required: [spec]
 
         - type: function
@@ -102,6 +113,17 @@ providers:
                 spec:
                   type: object
                   description: The validated team spec
+                message:
+                  type: string
+                  description: Optional commit/PR title override
+                branch:
+                  type: string
+                  description: Optional branch name override
+                labels:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional labels to apply to the PR
               required: [spec]
 
         - type: function
@@ -271,6 +293,9 @@ providers:
                   type: string
                 repo:
                   type: string
+                issue_number:
+                  type: integer
+                  description: Issue (or PR) number to update; required for method=update
                 title:
                   type: string
                 body:
@@ -611,9 +636,22 @@ tests:
           const openIdx = ordered.indexOf('open_team_pr');
           if (searchIdx >= 0 && openIdx >= 0 && searchIdx < openIdx) return false;
           return true;
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # TEST 4: ADD MEMBER — explicit confirmation triggers open_team_pr
+      - type: javascript
+        value: |
+          // open_team_pr (PR 2) must be called with branch="onboard/st-nova" and labels=["nomos"]
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const openCall = calls.find(c => (c.function?.name || c.name) === 'open_team_pr');
+          if (!openCall) return false;
+          const args = openCall.function?.arguments ? JSON.parse(openCall.function.arguments) : (openCall.input || {});
+          return args.branch === 'onboard/st-nova' && Array.isArray(args.labels) && args.labels.includes('nomos');
+      - type: javascript
+        value: |
+          // open_team_docs_pr (PR 3) must be called with branch="onboard/st-nova-docs" and labels=["nomos"]
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const docsCall = calls.find(c => (c.function?.name || c.name) === 'open_team_docs_pr');
+          if (!docsCall) return false;
+          const args = docsCall.function?.arguments ? JSON.parse(docsCall.function.arguments) : (docsCall.input || {});
+          return args.branch === 'onboard/st-nova-docs' && Array.isArray(args.labels) && args.labels.includes('nomos');
   # ═══════════════════════════════════════════════════════════════════════════
 
   - description: "Multi-turn add member: explicit confirmation — open_team_pr is called with updated spec"
@@ -711,6 +749,14 @@ tests:
           const openIdx = ordered.indexOf('open_team_pr');
           if (searchIdx >= 0 && openIdx >= 0 && searchIdx < openIdx) return false;
           return true;
+      - type: javascript
+        value: |
+          // open_team_pr must be called with branch="update/pt-arche" and labels=["nomos"]
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const openCall = calls.find(c => (c.function?.name || c.name) === 'open_team_pr');
+          if (!openCall) return false;
+          const args = openCall.function?.arguments ? JSON.parse(openCall.function.arguments) : (openCall.input || {});
+          return args.branch === 'update/pt-arche' && Array.isArray(args.labels) && args.labels.includes('nomos');
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 5: ADD REPOSITORY — collects repo info before opening PR
@@ -871,3 +917,97 @@ tests:
           const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
           const lower = text.toLowerCase();
           return lower.includes('confirm') || lower.includes('proceed') || lower.includes('summary') || lower.includes('shall i') || lower.includes('go ahead') || lower.includes('pull request') || lower.includes('open a pr');
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # TEST 7: MANUAL FLOW — issue_write applies nomos label after create_pull_request
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - description: "Multi-turn manual flow: issue_write applies nomos label with PR number after create_pull_request"
+    vars:
+      conversation:
+        - role: user
+          content: "Yes, go ahead and open the PR for the production.yml update."
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_01
+              name: search_pull_requests
+              input:
+                query: "repo:osinfra-io/pt-logos head:onboard/st-nova is:open"
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_01
+              content: '{"total_count":0,"items":[]}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_02
+              name: create_branch
+              input:
+                owner: osinfra-io
+                repo: pt-logos
+                branch: onboard/st-nova
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_02
+              content: '{"ref":"refs/heads/onboard/st-nova"}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_03
+              name: push_files
+              input:
+                owner: osinfra-io
+                repo: pt-logos
+                branch: onboard/st-nova
+                files:
+                  - path: .github/workflows/production.yml
+                    content: "# production.yml content"
+                message: "Add st-nova to production.yml"
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_03
+              content: '{"commit":{"sha":"abc123"}}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_04
+              name: create_pull_request
+              input:
+                owner: osinfra-io
+                repo: pt-logos
+                title: "Onboard st-nova: update production.yml"
+                head: onboard/st-nova
+                base: main
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_04
+              content: '{"number":42,"html_url":"https://github.com/osinfra-io/pt-logos/pull/42"}'
+    assert:
+      - type: javascript
+        value: |
+          // After create_pull_request returns PR #42, agent must call issue_write to apply the nomos label
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const raw = typeof output === 'string' ? output : JSON.stringify(output);
+          const allNames = [...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])];
+          return allNames.includes('issue_write');
+      - type: javascript
+        value: |
+          // issue_write must supply issue_number=42 and labels=["nomos"]
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const writeCall = calls.find(c => (c.function?.name || c.name) === 'issue_write');
+          if (!writeCall) return false;
+          const args = writeCall.function?.arguments ? JSON.parse(writeCall.function.arguments) : (writeCall.input || {});
+          return args.issue_number === 42 && Array.isArray(args.labels) && args.labels.includes('nomos');
+      - type: javascript
+        value: |
+          // issue_write must use method=update (not create) to label an existing PR
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const writeCall = calls.find(c => (c.function?.name || c.name) === 'issue_write');
+          if (!writeCall) return false;
+          const args = writeCall.function?.arguments ? JSON.parse(writeCall.function.arguments) : (writeCall.input || {});
+          return args.method === 'update';
