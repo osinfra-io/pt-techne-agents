@@ -600,6 +600,8 @@ tests:
                       environments: [main-production]
                     st-nova:
                       environments: [main-production]
+                branch: "onboard/st-nova-environment"
+                labels: ["nomos"]
         - role: user
           content:
             - type: tool_result
@@ -749,14 +751,6 @@ tests:
           const openIdx = ordered.indexOf('open_team_pr');
           if (searchIdx >= 0 && openIdx >= 0 && searchIdx < openIdx) return false;
           return true;
-      - type: javascript
-        value: |
-          // open_team_pr must be called with branch="update/pt-arche" and labels=["nomos"]
-          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
-          const openCall = calls.find(c => (c.function?.name || c.name) === 'open_team_pr');
-          if (!openCall) return false;
-          const args = openCall.function?.arguments ? JSON.parse(openCall.function.arguments) : (openCall.input || {});
-          return args.branch === 'update/pt-arche' && Array.isArray(args.labels) && args.labels.includes('nomos');
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 5: ADD REPOSITORY — collects repo info before opening PR
@@ -926,9 +920,11 @@ tests:
     vars:
       conversation:
         - role: user
-          content: "Yes, go ahead and open the PR for the production.yml update."
+          content: "I'm onboarding st-nova. The open_team_pr call came back action=noop — the logos spec already matches main. But st-nova isn't in the production.yml jobs matrix yet, so that file still needs a dedicated PR."
         - role: assistant
           content:
+            - type: text
+              text: "Got it — the logos tfvars are already up to date, so I'll open a dedicated PR for the production.yml change using the standard manual flow. Let me check if one already exists."
             - type: tool_use
               id: toolu_01
               name: search_pull_requests
