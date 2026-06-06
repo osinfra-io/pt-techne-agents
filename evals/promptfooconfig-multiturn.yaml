@@ -641,6 +641,7 @@ tests:
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 4: ADD MEMBER — explicit confirmation triggers open_team_pr
+  - description: "Multi-turn add member: explicit confirmation triggers open_team_pr"
     vars:
       conversation:
         - role: user
