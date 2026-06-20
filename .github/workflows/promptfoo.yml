@@ -25,7 +25,7 @@ jobs:
           persist-credentials: false
 
       - name: Promptfoo (first-turn)
-        uses: promptfoo/promptfoo-action@e2b793945efd6eb3014332602598c84252eddd1f # v1.3.1
+        uses: promptfoo/promptfoo-action@04839e664f52212b877170219dab0d7ad2bf6440 # v1.3.4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           config: evals/promptfooconfig.yaml
@@ -35,7 +35,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Promptfoo (multi-turn)
-        uses: promptfoo/promptfoo-action@e2b793945efd6eb3014332602598c84252eddd1f # v1.3.1
+        uses: promptfoo/promptfoo-action@04839e664f52212b877170219dab0d7ad2bf6440 # v1.3.4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           config: evals/promptfooconfig-multiturn.yaml
