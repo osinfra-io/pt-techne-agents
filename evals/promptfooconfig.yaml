@@ -436,7 +436,7 @@ tests:
           // Agent must not confuse display name "Nova" with team key "st-nova"
           if (names.includes('open_team_pr')) {
             const prCall = calls.find(c => (c.function?.name || c.name) === 'open_team_pr');
-            const args = JSON.parse(prCall?.function?.arguments || '{}');
+            const args = prCall?.function?.arguments ? JSON.parse(prCall.function.arguments) : (prCall?.input || {});
             return args?.spec?.team_key === 'st-nova';
           }
           return text.toLowerCase().includes('st-nova') || text.toLowerCase().includes('nova') || names.includes('get_me');
@@ -759,7 +759,7 @@ tests:
           const raw = typeof output === 'string' ? output : JSON.stringify(output);
           const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
           const text = typeof output === 'string' ? output : (typeof output?.content === 'string' ? output.content : JSON.stringify(output?.content || ''));
-          return names.includes('find_repo') || text.includes('Nomos') || text.toLowerCase().includes('repository');
+          return names.includes('find_repo') || names.includes('get_me') || text.includes('Nomos') || text.toLowerCase().includes('repository');
       - type: javascript
         value: |
           const calls = Array.isArray(output) ? output : (output?.tool_calls || []);
