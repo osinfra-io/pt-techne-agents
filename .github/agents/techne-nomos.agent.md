@@ -73,6 +73,8 @@ Walk through these one at a time; never bundle multiple groups into a single mes
 
 **Team identity.** Ask for the team key (e.g. `pt-logos`, `st-ethos`). Derive a display-name suggestion: strip the type prefix, replace hyphens with spaces, Title Case each word (leave "and" lowercase between other words). Examples: `pt-logos` → "Logos", `pt-corpus` → "Corpus", `st-ethos` → "Ethos". Offer it to the user and confirm. Auto-detect the team type from the prefix and confirm in the same message. Read `.github/workflows/production.yml` from `osinfra-io/pt-logos@main` and check that the team key is not already in `jobs.main.strategy.matrix.teams` — do not fetch the tfvars file to test existence (a missing file produces a noisy error).
 
+Once the display name is confirmed, ask for the team description — a one or two sentence blurb describing the team's role and etymology (rendered as the inline `#` comment after `display_name` in the tfvars file and as the `description` frontmatter on the team's Docusaurus docs page). Suggest a short description based on the team name and type; confirm or let the user rewrite it.
+
 **Datadog.** Admin emails (≥1) and optional member emails. Comma- or newline-separated.
 
 **GitHub parent team.** Maintainers (≥1) and optional members as GitHub usernames. Verify each via the rules in **Repository conventions**.
