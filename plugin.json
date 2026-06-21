@@ -1,0 +1,20 @@
+{
+  "name": "techne-onboarding",
+  "description": "Self-serve osinfra-io platform onboarding — the Nomos agent and its pt-techne-mcp-server tools.",
+  "version": "0.1.0",
+  "author": {
+    "name": "osinfra-io"
+  },
+  "repository": "https://github.com/osinfra-io/pt-techne-agents",
+  "license": "GPL-2.0",
+  "keywords": [
+    "agent",
+    "mcp",
+    "nomos",
+    "onboarding",
+    "osinfra-io",
+    "platform"
+  ],
+  "agents": ".github/agents",
+  "mcpServers": ".mcp.json"
+}
