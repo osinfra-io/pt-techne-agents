@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "pt-techne-mcp-server": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_TOKEN",
+        "ghcr.io/osinfra-io/pt-techne-mcp-server:v0.1.9"
+      ]
+    }
+  }
+}
