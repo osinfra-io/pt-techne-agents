@@ -122,6 +122,8 @@ Ask all GKE questions in a **single message** (do not split across turns):
 - **Cluster locations** — supported zones: `us-east1-b`, `us-east1-c`, `us-east1-d`, `us-east4-a`, `us-east4-b`, `us-east4-c`; or a region (e.g. `us-east1`) for a standard regional cluster.
 - **Node pool** — machine type (default `e2-standard-2`), min nodes (default 1), max nodes (default 3) per location.
 
+- **Namespaces** — ask whether the team needs any Kubernetes namespaces in Pneuma's clusters (even teams without cluster locations may need namespaces to deploy workloads into Pneuma's existing clusters). If yes, collect one or more namespace names and for each ask whether Istio sidecar injection should be enabled or disabled (default: disabled; briefly explain that enabling it adds an Envoy proxy sidecar for mTLS, traffic management, and observability). Namespace names must start with a lowercase letter and contain only lowercase letters, digits, and hyphens. Suggest the team key without its type prefix as the first name (e.g. `pt-kryptos` → `kryptos`). The team may add more namespaces at any time.
+
 If the user corrects a single value, retain everything else and only re-validate what changed.
 
 **Auto-populate subnet ranges** — follow the IPAM procedure in **Operation 10**. Present the suggested ranges for confirmation before adding them to the spec.
@@ -188,6 +190,7 @@ All mutations follow the same pattern:
 | 8 | Add GCP project | Optional API services · enable Datadog? | Check `enable_google_project` not already true. | `"Update {team-key}: add Google Cloud Platform project"` |
 | 9 | Remove GCP project | (just team key) | Warn: Corpus will destroy the GCP project on next apply. Require explicit confirmation. | `"Update {team-key}: remove Google Cloud Platform project"` |
 | 11 | Add Cloud SQL | Regions (`us-east1`/`us-east4`) · database version (default `POSTGRES_16`) · machine tier (default `db-f1-micro`) | If `platform_managed_project` missing, ask to add it. Show existing config if `cloud_sql` already set. | `"Update {team-key}: add Cloud SQL"` |
+| 13 | Add/remove namespace | Which namespace name(s)? · `istio_injection` per namespace (`enabled`/`disabled`, default `disabled`) | Requires `platform_managed_project.kubernetes_engine` to exist — if missing, ask to configure it (a team without cluster locations may still have a `kubernetes_engine` block for namespaces). Warn before removing: Pneuma will destroy the namespace on next apply. Show current namespaces before asking what to add or remove. | `"Update {team-key}: add/remove namespace {name}"` |
 
 ### Operation 12 — Open a GitHub issue
 
