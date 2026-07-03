@@ -22,6 +22,6 @@ copilot plugin marketplace add osinfra-io/pt-ai-plugins
 copilot plugin install techne-onboarding@osinfra-io
 ```
 
-Installing wires up the agent and the MCP server together in one step, replacing the manual MCP registration. Set `GITHUB_TOKEN` in your environment for the GitHub-backed tools — see [pt-techne-mcp-server](https://github.com/osinfra-io/pt-techne-mcp-server#configuration) for the required token scopes.
+Installing wires up the agent and the MCP server together in one step, replacing the manual MCP registration. Set `NOMOS_GITHUB_TOKEN` in your environment for the GitHub-backed tools — see [pt-techne-mcp-server](https://github.com/osinfra-io/pt-techne-mcp-server#configuration) for the required token scopes.
 
 This plugin is indexed by the [`pt-ai-plugins`](https://github.com/osinfra-io/pt-ai-plugins) marketplace, which references this repository directly — the agent stays canonical here so its [Promptfoo evaluations](.github/workflows/promptfoo.yml) keep testing the real file.
