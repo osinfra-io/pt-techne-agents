@@ -18,7 +18,7 @@ the user's behalf.
 
 | Path | Purpose |
 |------|---------|
-| `.github/agents/techne-nomos.agent.md` | The Nomos agent — onboard teams, manage members/repositories, request infrastructure, configure platform resources |
+| `.github/agents/nomos.agent.md` | The Nomos agent — onboard teams, manage members/repositories, request infrastructure, configure platform resources |
 | `evals/` | [promptfoo](https://promptfoo.dev) evaluations for agent first-turn behavior |
 
 ## Agent files

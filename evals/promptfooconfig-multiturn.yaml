@@ -17,7 +17,7 @@ prompts:
 
 defaultTest:
   vars:
-    systemPrompt: file://../.github/agents/techne-nomos.agent.md
+    systemPrompt: file://../.github/agents/nomos.agent.md
 
 providers:
   - id: anthropic:messages:claude-sonnet-4-6
