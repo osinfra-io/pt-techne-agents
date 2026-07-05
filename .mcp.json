@@ -8,7 +8,7 @@
         "--rm",
         "-e",
         "NOMOS_GITHUB_TOKEN",
-        "ghcr.io/osinfra-io/pt-techne-mcp-server:v0.2.2"
+        "ghcr.io/osinfra-io/pt-techne-mcp-server:v0.2.3"
       ]
     }
   }
