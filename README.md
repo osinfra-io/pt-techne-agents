@@ -11,15 +11,15 @@ This repository is the catalog of GitHub Copilot agents for the osinfra-io platf
 
 | Agent | Description |
 |---|---|
-| [techne-nomos.agent.md](.github/agents/techne-nomos.agent.md) | The self-serve interface to the osinfra.io platform — onboard teams, manage members and repositories, request infrastructure, and configure platform resources |
+| [nomos.agent.md](.github/agents/nomos.agent.md) | The self-serve interface to the osinfra.io platform — onboard teams, manage members and repositories, request infrastructure, and configure platform resources |
 
 ## Install as a plugin
 
-The Nomos agent and its `pt-techne-mcp-server` tools are packaged as the `techne-onboarding` GitHub Copilot CLI plugin ([`plugin.json`](plugin.json) + [`.mcp.json`](.mcp.json)). Install it from the osinfra-io marketplace:
+The Nomos agent and its `pt-techne-mcp-server` tools are packaged as the `techne-agents` GitHub Copilot CLI plugin ([`plugin.json`](plugin.json) + [`.mcp.json`](.mcp.json)). Install it from the osinfra-io marketplace:
 
 ```bash
 copilot plugin marketplace add osinfra-io/pt-ai-plugins
-copilot plugin install techne-onboarding@osinfra-io
+copilot plugin install techne-agents@osinfra-io
 ```
 
 Installing wires up the agent and the MCP server together in one step, replacing the manual MCP registration. Set `NOMOS_GITHUB_TOKEN` in your environment for the GitHub-backed tools — see [pt-techne-mcp-server](https://github.com/osinfra-io/pt-techne-mcp-server#configuration) for the required token scopes.
