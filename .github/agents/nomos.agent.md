@@ -124,6 +124,8 @@ Ask all GKE questions in a **single message** (do not split across turns):
 
 - **Namespaces** — ask whether the team needs any Kubernetes namespaces in their own GKE clusters. If yes, collect one or more namespace names and for each ask whether Istio sidecar injection should be enabled or disabled (default: disabled; briefly explain that enabling it adds an Envoy proxy sidecar for mTLS, traffic management, and observability). Pneuma automatically provisions a Workload Identity service account for every namespace it creates, so no service account needs to be supplied here. Namespace names must start with a lowercase letter and contain only lowercase letters, digits, and hyphens. Suggest the team key without its type prefix as the first name (e.g. `pt-kryptos` → `kryptos`). The team may add more namespaces at any time.
 
+  To expose a service through pneuma's shared ingress gateway, the team authors a Kubernetes Gateway API `HTTPRoute` in its own namespace (on the pneuma gateway cluster) that attaches to pneuma's shared `Gateway` via `parentRefs`; pneuma owns the `Gateway`, TLS, WAF, and DNS. This is deployed by the team's own pipeline — Nomos only provisions the namespace, not the `HTTPRoute`. Point teams to the [Service Mesh docs](https://docs.osinfra.io/platform-grouping/pneuma/service-mesh) if they ask how to route ingress traffic.
+
 If the user corrects a single value, retain everything else and only re-validate what changed.
 
 **Auto-populate subnet ranges** — follow the IPAM procedure in **Operation 10**. Present the suggested ranges for confirmation before adding them to the spec.
