@@ -45,7 +45,7 @@ Call `pt-techne-mcp-server/lookup_user` twice — once with the user's GitHub us
 
 **Step 5 — Present personalised context and ask what they need:**
 
-If they appear in one or more teams, summarise their memberships as a **markdown table** (never inline text with separators) — columns: Team, GitHub, Datadog, Google Cloud Platform. Use `—` for fields that don't apply. Never abbreviate role names — spell them out in full (e.g. "Artifact Registry reader", not "AR reader"). Then ask what they'd like to do, routing on intent.
+If they appear in one or more teams, summarise their memberships as a **markdown table** (never inline text with separators) — columns: Team, GitHub, Datadog, Google Cloud Platform. Use `—` for fields that don't apply. Never abbreviate role names — spell them out in full (e.g. "Artifact Registry reader", not "AR reader"). For Google Cloud Platform, `lookup_user` returns a subject per group in `"role/environment"` format (e.g. `"writer/sandbox"`, `"admin/production"`); group these by role across environments — for example, `"writer (sandbox, non-production); reader (production)"`. Then ask what they'd like to do, routing on intent.
 
 If intent is ambiguous, present the full menu (one bullet per operation): onboard a new team, add/remove a member, add/remove a repository, add/remove a GitHub environment, enable/disable a feature flag, add/remove a GCP project, add a GKE cluster location, add Cloud SQL, open an issue on `pt-logos`.
 
@@ -81,11 +81,15 @@ Once the display name is confirmed, ask for the team description — a one or tw
 
 **GitHub child teams.** The four standard teams (sandbox-approvers, non-production-approvers, production-approvers, repository-administrators) are always created automatically. Memberships are optional — skip entirely if the user has nobody to add. Otherwise collect maintainers/members for whichever standards they want to populate, plus any custom child teams. Apply the same username verification.
 
-**Google Cloud Identity groups.** Three groups control GCP IAM at the folder level — ask for **admin** first, then reader, then writer. For each: owners (≥1), managers (optional), members (optional). If the user gives a single email for all three groups, confirm explicitly before applying.
+**Google Cloud Identity groups.** Three groups control GCP IAM at the environment folder level. For each environment (sandbox, non-production, production), there is an **admin**, **reader**, and **writer** group. Ask for each role's membership per environment:
 
 - **admin** — all writer permissions, plus sensitive tasks like managing tag bindings, roles, permissions, and billing
 - **reader** — read-only actions that don't affect state
 - **writer** — all reader permissions, plus actions that modify state
+
+Collect the membership environment by environment, or ask if the membership is the same across all environments (common for new teams). For each environment × role combination: owners (≥1 overall — at least one environment/role must have an owner), managers (optional), members (optional).
+
+**Common pattern for new teams:** the same person is admin/reader/writer owner in all three environments. Offer this as the default ("same membership in all environments?") and expand only if they want to differentiate.
 
 #### Phase 2 — Optional enhancements
 
@@ -183,7 +187,7 @@ All mutations follow the same pattern:
 
 | # | Trigger | Key questions | Warnings / special behaviour | PR title |
 |---|---------|---------------|------------------------------|----------|
-| 2 | Add/remove member | Which group? (parent team, child team, Datadog, Google group, artifact registry) · Add or remove? · Username(s) or email(s)? | Warn if removing the last maintainer. Pre-fill the user's own identity when adding themselves. Artifact registry groups only available when `platform_managed_project.kubernetes_engine` is configured. | `"Update {team-key}: add/remove member from {group}"` |
+| 2 | Add/remove member | Which group? (parent team, child team, Datadog, Google Cloud group, artifact registry) · For Google Cloud groups: which role (admin/reader/writer) and which environment(s) (sandbox/non-production/production)? · Add or remove? · Username(s) or email(s)? | Warn if removing the last maintainer or last owner from a group. Pre-fill the user's own identity when adding themselves. Artifact registry groups only available when `platform_managed_project.kubernetes_engine` is configured. | `"Update {team-key}: add/remove member from {group}"` |
 | 3 | Add repository | Repo name · description · topics · push allowances · feature flags · Pages? · environments? | Name must equal team key or `{team-key}-{suffix}`. Check repo doesn't already exist. | `"Update {team-key}: add repository {repo-name}"` |
 | 4 | Remove repository | Which repo? | Show what will be removed; require explicit confirmation. | `"Update {team-key}: remove repository {repo-name}"` |
 | 5 | Add GitHub environment | Repo · env key · display name · reviewer teams · branch policy | Check key doesn't collide with existing environments. Default reviewers: `{team-key}-{env}-approvers`. | `"Update {team-key}: add environment {env-key} to {repo-name}"` |
