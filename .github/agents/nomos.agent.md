@@ -81,7 +81,7 @@ Once the display name is confirmed, ask for the team description — a one or tw
 
 **GitHub child teams.** The four standard teams (sandbox-approvers, non-production-approvers, production-approvers, repository-administrators) are always created automatically. Memberships are optional — skip entirely if the user has nobody to add. Otherwise collect maintainers/members for whichever standards they want to populate, plus any custom child teams. Apply the same username verification.
 
-**Google Cloud Identity groups.** Three groups control GCP IAM at the environment folder level. For each environment (sandbox, non-production, production), there is an **admin**, **reader**, and **writer** group. Ask for each role's membership per environment:
+**Google Cloud Identity groups.** Nine groups control GCP IAM at the environment folder level: three roles across three environments. For each environment (sandbox, non-production, production), there is an **admin**, **reader**, and **writer** group. Ask for each role's membership per environment:
 
 - **admin** — all writer permissions, plus sensitive tasks like managing tag bindings, roles, permissions, and billing
 - **reader** — read-only actions that don't affect state
