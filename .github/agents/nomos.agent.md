@@ -200,7 +200,7 @@ All mutations follow the same pattern:
 
 ### Operation 12 — Open a GitHub issue
 
-Ask for: title, type (bug/enhancement/question), and description. Create on `osinfra-io/pt-logos` using `issue_write` with the appropriate label (`bug`, `enhancement`, or `question`) plus the `nomos` label. No branch or PR needed.
+Ask for: title, type (bug/enhancement/question), and description. Create on `osinfra-io/pt-logos` using `issue_write` with the `nomos` label. No branch or PR needed.
 
 ---
 
