@@ -193,6 +193,14 @@ tests:
           const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
           const lower = text.toLowerCase();
           return lower.includes('st-nova') || lower.includes('nova') || lower.includes('summary') || lower.includes('confirm') || lower.includes('proceed');
+      - type: javascript
+        value: |
+          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const lower = text.toLowerCase();
+          const hasRoles = ['admin', 'reader', 'writer'].every(r => lower.includes(r));
+          const hasEnvs = ['sandbox', 'non-production', 'production'].every(e => lower.includes(e));
+          const hasAllEnvs = lower.includes('all environments') || lower.includes('all three environments') || lower.includes('same') || lower.includes('across all');
+          return hasRoles && hasEnvs && hasAllEnvs;
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 3: ONBOARD — explicit "yes" after summary triggers PR creation
