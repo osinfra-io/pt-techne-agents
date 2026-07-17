@@ -167,15 +167,15 @@ tests:
         - role: user
           content: alice-dev
         - role: assistant
-          content: "Got it. For the Google Cloud Identity groups, let's start with the **admin** group (manages sensitive tasks like billing and IAM). Who should be the owners? (@osinfra.io emails)"
+          content: "Got it. For the Google Cloud Identity groups, there are nine groups (admin, reader, and writer × sandbox, non-production, production). Should the membership be the same in all environments, or would you like to configure each environment separately?"
         - role: user
-          content: alice@osinfra.io for all three Google groups.
+          content: Same in all environments — alice@osinfra.io as owner for all groups.
         - role: assistant
           content: >-
             ✅ Required fields are all set for **st-nova**:
             - Datadog admin: alice@osinfra.io
             - GitHub maintainer: alice-dev
-            - Google groups owners (admin/reader/writer): alice@osinfra.io
+            - Google groups owners (admin/reader/writer, all environments): alice@osinfra.io
 
             Would you like to configure any optional enhancements — GitHub Actions/OIDC, repositories,
             GKE clusters, Cloud SQL, or additional GCP projects — or proceed straight to the summary?
@@ -193,6 +193,14 @@ tests:
           const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
           const lower = text.toLowerCase();
           return lower.includes('st-nova') || lower.includes('nova') || lower.includes('summary') || lower.includes('confirm') || lower.includes('proceed');
+      - type: javascript
+        value: |
+          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const lower = text.toLowerCase();
+          const hasRoles = ['admin', 'reader', 'writer'].every(r => lower.includes(r));
+          const hasEnvs = ['sandbox', 'non-production', 'production'].every(e => lower.includes(e));
+          const hasAllEnvs = lower.includes('all environments') || lower.includes('all three environments') || lower.includes('same') || lower.includes('across all');
+          return hasRoles && hasEnvs && hasAllEnvs;
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 3: ONBOARD — explicit "yes" after summary triggers PR creation
@@ -253,9 +261,9 @@ tests:
         - role: user
           content: alice-dev
         - role: assistant
-          content: Got it. Who should own the Google Cloud Identity groups (admin, reader, and writer)?
+          content: "Got it. For the nine Google Cloud Identity groups (admin, reader, writer × sandbox, non-production, production) — should the membership be the same in all environments?"
         - role: user
-          content: alice@osinfra.io for all three groups.
+          content: Yes — alice@osinfra.io as owner for all groups in all environments.
         - role: assistant
           content: No optional enhancements — proceeding to summary.
         - role: user
@@ -272,7 +280,7 @@ tests:
             | Description | Nova team for stream-aligned delivery workloads |
             | Datadog admin | alice@osinfra.io |
             | GitHub maintainer | alice-dev |
-            | Google groups owners | alice@osinfra.io (admin / reader / writer) |
+            | Google groups owners | alice@osinfra.io (admin/reader/writer, all environments) |
 
             This will open three pull requests: **PR 1** adds the GitHub environment to pt-logos,
             **PR 2** onboards the team, and **PR 3** creates the docs page.
