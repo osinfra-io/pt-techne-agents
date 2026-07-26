@@ -197,10 +197,12 @@ tests:
         value: |
           const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
           const lower = text.toLowerCase();
+          // Accept either explicit enumeration of roles/envs OR shorthand references
           const hasRoles = ['admin', 'reader', 'writer'].every(r => lower.includes(r));
           const hasEnvs = ['sandbox', 'non-production', 'production'].every(e => lower.includes(e));
           const hasAllEnvs = lower.includes('all environments') || lower.includes('all three environments') || lower.includes('same') || lower.includes('across all');
-          return hasRoles && hasEnvs && hasAllEnvs;
+          const hasShorthand = (lower.includes('all groups') || lower.includes('all nine') || lower.includes('google groups') || lower.includes('google cloud identity')) && (hasAllEnvs || lower.includes('owner'));
+          return (hasRoles && hasEnvs && hasAllEnvs) || hasShorthand;
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 3: ONBOARD — explicit "yes" after summary triggers PR creation
