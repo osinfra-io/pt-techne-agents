@@ -121,7 +121,7 @@ For each repository collect:
 Only if the team runs Kubernetes workloads.
 
 Ask all GKE questions in a **single message** (do not split across turns):
-- **DNS subdomain** — suggest the team key without prefix (e.g. `temp` for `st-temp`); show the resulting zones with the suggested value substituted (`temp.osinfra.io` production, `temp.nonprod.osinfra.io` non-production, `temp.sb.osinfra.io` sandbox); confirm or override. This same subdomain is the team's HTTP ingress host on pneuma's shared Istio Gateway — pneuma binds every route it renders for the team to `<subdomain>.osinfra.io`, so the team serves only its own subdomain.
+- **DNS subdomain** — suggest the team key without prefix (e.g. `temp` for `st-temp`); show the resulting zones with the suggested value substituted (`temp.osinfra.io` production, `temp.nonprod.osinfra.io` non-production, `temp.sb.osinfra.io` sandbox); confirm or override. This same subdomain is the team's HTTP ingress host on pneuma's shared Istio Gateway — pneuma binds every route it renders for the team to `temp.osinfra.io` (using their chosen subdomain), so the team serves only its own subdomain.
 - **Artifact Registry** — does the team publish container images? If yes, collect reader/writer group emails; default role to **owner** for anyone added during onboarding unless they volunteer otherwise.
 - **Cluster locations** — supported zones: `us-east1-b`, `us-east1-c`, `us-east1-d`, `us-east4-a`, `us-east4-b`, `us-east4-c`; or a region (e.g. `us-east1`) for a standard regional cluster.
 - **Node pool** — machine type (default `e2-standard-2`), min nodes (default 1), max nodes (default 3) per location.
