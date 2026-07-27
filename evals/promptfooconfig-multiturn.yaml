@@ -627,3 +627,248 @@ tests:
           const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
           const lower = text.toLowerCase();
           return lower.includes('confirm') || lower.includes('proceed') || lower.includes('summary') || lower.includes('shall i') || lower.includes('go ahead') || lower.includes('pull request') || lower.includes('open a pr');
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # TEST 7: GATEWAY ROUTE AUTH — valid enforced policy is summarized, not auto-applied
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - description: "Multi-turn gateway auth: enforcing an existing route collects required groups and does not auto-apply"
+    vars:
+      conversation:
+        - role: user
+          content: Add gateway auth to the app route for st-ethos.
+        - role: assistant
+          content:
+            - type: text
+              text: "👋 Hi! I'm the Nomos Agent. Give me a moment while I look you up…"
+            - type: tool_use
+              id: toolu_01
+              name: get_me
+              input: {}
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_01
+              content: '{"login":"brettcurtis","email":"brett@osinfra.io"}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_02
+              name: lookup_user
+              input:
+                github_username: brettcurtis
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_02
+              content: '{"matches":[{"team_key":"st-ethos","roles":["github_parent_team.maintainers"]}]}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_03
+              name: lookup_user
+              input:
+                email: brett@osinfra.io
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_03
+              content: '{"matches":[{"team_key":"st-ethos","roles":["google_groups.admin.owners"]}]}'
+        - role: assistant
+          content:
+            - type: text
+              text: You're on st-ethos. Let me load the current spec and routes.
+            - type: tool_use
+              id: toolu_04
+              name: get_team
+              input:
+                team_key: st-ethos
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_04
+              content: >-
+                {"team_key":"st-ethos","team_type":"stream-aligned-team","display_name":"Ethos","display_name_comment":"Stream-aligned team for Ethos workloads","datadog_team_memberships":{"admins":["brett@osinfra.io"],"members":[]},"github_parent_team_memberships":{"maintainers":["brettcurtis"],"members":[]},"google_basic_groups_env_memberships":{"admin":{"sandbox":{"owners":["brett@osinfra.io"]},"non-production":{"owners":["brett@osinfra.io"]},"production":{"owners":["brett@osinfra.io"]}},"reader":{"sandbox":{"owners":["brett@osinfra.io"]},"non-production":{"owners":["brett@osinfra.io"]},"production":{"owners":["brett@osinfra.io"]}},"writer":{"sandbox":{"owners":["brett@osinfra.io"]},"non-production":{"owners":["brett@osinfra.io"]},"production":{"owners":["brett@osinfra.io"]}}},"platform_managed_project":{"kubernetes_engine":{"dns_subdomain":"ethos","namespaces":{"app":{"istio_injection":"enabled","routes":{"app":{"path":"/app","port":8080,"service":"app"}}}}}}}
+        - role: assistant
+          content: "The `app` namespace is mesh-enabled and has route `app` at `/app`. Gateway auth is declared in Logos and enforced centrally by Pneuma with Keycloak JWT validation and OAuth2 Proxy group/role authorization. Which groups or roles should be allowed? You can also list any public paths under `/app`."
+        - role: user
+          content: Enforce it for required group st-ethos-users and leave /app/healthz public.
+    assert:
+      - type: javascript
+        value: |
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const raw = typeof output === 'string' ? output : JSON.stringify(output);
+          const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
+          return !names.includes('open_team_pr');
+      - type: javascript
+        value: |
+          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const lower = text.toLowerCase();
+          return (lower.includes('route_auth_policies') || lower.includes('gateway auth') || lower.includes('auth policy')) &&
+            lower.includes('st-ethos-users') &&
+            lower.includes('/app/healthz') &&
+            (lower.includes('confirm') || lower.includes('pull request') || lower.includes('summary'));
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # TEST 8: GATEWAY ROUTE AUTH — enforced policies require group or role
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - description: "Multi-turn gateway auth: enforced policy without group or role asks for one"
+    vars:
+      conversation:
+        - role: user
+          content: Add gateway auth to st-ethos.
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_01
+              name: get_team
+              input:
+                team_key: st-ethos
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_01
+              content: >-
+                {"team_key":"st-ethos","platform_managed_project":{"kubernetes_engine":{"namespaces":{"app":{"istio_injection":"enabled","routes":{"app":{"path":"/app","port":8080,"service":"app"}}}}}}}
+        - role: assistant
+          content: "Route `app` is available in mesh-enabled namespace `app`. Enforced auth defaults to fail-closed, so I need at least one required group or role. Which should be allowed?"
+        - role: user
+          content: Enforce the app route and make /app/healthz public.
+    assert:
+      - type: javascript
+        value: |
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const raw = typeof output === 'string' ? output : JSON.stringify(output);
+          const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
+          return !names.includes('open_team_pr');
+      - type: javascript
+        value: |
+          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const lower = text.toLowerCase();
+          return (lower.includes('group') || lower.includes('role')) &&
+            (lower.includes('required') || lower.includes('at least one') || lower.includes('fail-closed'));
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # TEST 9: GATEWAY ROUTE AUTH — reject non-mesh namespaces
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - description: "Multi-turn gateway auth: rejects auth on non-mesh namespace"
+    vars:
+      conversation:
+        - role: user
+          content: Protect the openbao route for st-ethos.
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_01
+              name: get_team
+              input:
+                team_key: st-ethos
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_01
+              content: >-
+                {"team_key":"st-ethos","platform_managed_project":{"kubernetes_engine":{"namespaces":{"openbao":{"istio_injection":"disabled","routes":{"openbao":{"path":"/openbao","port":8200,"service":"openbao"}}}}}}}
+        - role: assistant
+          content: "The `openbao` namespace currently has Istio injection disabled."
+        - role: user
+          content: Add route auth anyway with required group platform-admins.
+    assert:
+      - type: javascript
+        value: |
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const raw = typeof output === 'string' ? output : JSON.stringify(output);
+          const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
+          return !names.includes('open_team_pr');
+      - type: javascript
+        value: |
+          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const lower = text.toLowerCase();
+          return (lower.includes('mesh') || lower.includes('istio')) &&
+            lower.includes('enabled') &&
+            (lower.includes('cannot') || lower.includes('only') || lower.includes('must'));
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # TEST 10: GATEWAY ROUTE AUTH — reject unknown route names
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - description: "Multi-turn gateway auth: rejects policy key that is not an existing route"
+    vars:
+      conversation:
+        - role: user
+          content: Protect route missing for st-ethos.
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_01
+              name: get_team
+              input:
+                team_key: st-ethos
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_01
+              content: >-
+                {"team_key":"st-ethos","platform_managed_project":{"kubernetes_engine":{"namespaces":{"app":{"istio_injection":"enabled","routes":{"app":{"path":"/app","port":8080,"service":"app"}}}}}}}
+        - role: assistant
+          content: "The mesh-enabled `app` namespace has one route: `app`."
+        - role: user
+          content: Add route_auth_policies for missing with required group st-ethos-users.
+    assert:
+      - type: javascript
+        value: |
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const raw = typeof output === 'string' ? output : JSON.stringify(output);
+          const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
+          return !names.includes('open_team_pr');
+      - type: javascript
+        value: |
+          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const lower = text.toLowerCase();
+          return lower.includes('route') &&
+            (lower.includes('exist') || lower.includes('known') || lower.includes('available') || lower.includes('match')) &&
+            lower.includes('app');
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # TEST 11: GATEWAY ROUTE AUTH — validate public path prefix rules
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - description: "Multi-turn gateway auth: rejects public path outside route prefix"
+    vars:
+      conversation:
+        - role: user
+          content: Add a public exception for st-ethos app auth.
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_01
+              name: get_team
+              input:
+                team_key: st-ethos
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_01
+              content: >-
+                {"team_key":"st-ethos","platform_managed_project":{"kubernetes_engine":{"namespaces":{"app":{"istio_injection":"enabled","routes":{"app":{"path":"/app","port":8080,"service":"app"}}}}}}}
+        - role: assistant
+          content: "The `app` route uses path prefix `/app`. Any public paths must be unique, non-root absolute paths under `/app`."
+        - role: user
+          content: Use required role viewer and public path /healthz.
+    assert:
+      - type: javascript
+        value: |
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const raw = typeof output === 'string' ? output : JSON.stringify(output);
+          const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
+          return !names.includes('open_team_pr');
+      - type: javascript
+        value: |
+          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const lower = text.toLowerCase();
+          return lower.includes('public') &&
+            lower.includes('/app') &&
+            (lower.includes('under') || lower.includes('prefix')) &&
+            (lower.includes('/healthz') || lower.includes('healthz'));

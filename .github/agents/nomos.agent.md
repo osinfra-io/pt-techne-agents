@@ -47,7 +47,7 @@ Call `pt-techne-mcp-server/lookup_user` twice — once with the user's GitHub us
 
 If they appear in one or more teams, summarise their memberships as a **markdown table** (never inline text with separators) — columns: Team, GitHub, Datadog, Google Cloud Platform. Use `—` for fields that don't apply. Never abbreviate role names — spell them out in full (e.g. "Artifact Registry reader", not "AR reader"). For Google Cloud Platform, `lookup_user` returns a subject per group in `"role/environment"` format (e.g. `"writer/sandbox"`, `"admin/production"`); group these by role across environments — for example, `"writer (sandbox, non-production); reader (production)"`. Then ask what they'd like to do, routing on intent.
 
-If intent is ambiguous, present the full menu (one bullet per operation): onboard a new team, add/remove a member, add/remove a repository, add/remove a GitHub environment, enable/disable a feature flag, add/remove a GCP project, add a GKE cluster location, add Cloud SQL, open an issue on `pt-logos`.
+If intent is ambiguous, present the full menu (one bullet per operation): onboard a new team, add/remove a member, add/remove a repository, add/remove a GitHub environment, enable/disable a feature flag, add/remove a GCP project, add a GKE cluster location, add/remove Kubernetes namespaces, protect gateway routes, add Cloud SQL, open an issue on `pt-logos`.
 
 **If they don't appear in any team**, welcome them and ask whether they want to join an existing team (→ add-member flow with their identity pre-filled) or onboard a new team (→ Operation 1 with their identity pre-filled into Datadog admins / Google group owners / GitHub team maintainers).
 
@@ -132,6 +132,16 @@ Ask all GKE questions in a **single message** (do not split across turns):
 
   Route intent lives entirely in the team's Logos spec under the namespace — the team does **not** author Kubernetes `HTTPRoute` objects (Istio multi-cluster propagates only service endpoints, not Gateway API config, and teams have no RBAC on pneuma's gateway clusters). Pneuma renders each declared route as a Gateway API `HTTPRoute` on its shared `Gateway`, serving the team's `<subdomain>.osinfra.io` host at the route's `path` prefix from the named `Service`. Pneuma owns the `Gateway`, TLS, WAF, and DNS. Subdomain isolation is enforced in the IaC/GitOps layer: pneuma derives each rendered route's hostname from the team's authoritative DNS zone (`dns_subdomain`), teams never supply a hostname, and only the pneuma pipeline applies manifests to the gateway clusters. Point teams to the [Service Mesh docs](https://docs.osinfra.io/platform-grouping/pneuma/service-mesh#logos-declared-routes) for the full model.
 
+  After collecting routes for a mesh-enabled namespace, ask whether the team wants gateway auth on any of those routes. Briefly explain the model: Logos records centralized gateway auth intent; Keycloak validates JWTs as the OIDC issuer; OAuth2 Proxy enforces group/role authorization with Istio external authorization; Pneuma renders the actual `RequestAuthentication` and `AuthorizationPolicy` centrally. The default is fail-closed: when auth is enforced, the route must declare at least one allowed group or role.
+
+  If they want gateway auth, add `route_auth_policies` under the namespace. The map is keyed by an **existing route name** from that same namespace's `routes` map. For each protected route collect:
+  - `enforced` — default `true`. When `true`, require at least one `required_group` or `required_role`. When `false`, do **not** collect or set `required_groups`, `required_roles`, or `public_paths`.
+  - `required_groups` — optional list of allowed identity groups. Values must be unique, non-empty, and contain no whitespace.
+  - `required_roles` — optional list of allowed application roles. Values must be unique, non-empty, and contain no whitespace.
+  - `public_paths` — optional unauthenticated paths, only when `enforced = true`. Each path must be unique, start with `/`, must not be exactly `/`, contain no whitespace, and be under the protected route's path prefix. If a route's path is `/app`, `/app/healthz` is valid and `/healthz` is not. If a route's path defaults to `/`, any non-root absolute path is under the route.
+
+  Validate route auth intent before the summary: only mesh-enabled namespaces with routes may declare `route_auth_policies`; every policy key must be an RFC 1123 label (lowercase letters, digits, hyphens, max 63 characters, start/end alphanumeric) and must exactly match an existing route name in that namespace. If the user asks to protect a non-mesh namespace, a namespace with no routes, or a route name that does not exist, explain the constraint and ask for a valid mesh-enabled route instead.
+
 If the user corrects a single value, retain everything else and only re-validate what changed.
 
 **Auto-populate subnet ranges** — follow the IPAM procedure in **Operation 10**. Present the suggested ranges for confirmation before adding them to the spec.
@@ -198,7 +208,8 @@ All mutations follow the same pattern:
 | 8 | Add GCP project | Optional API services · enable Datadog? | Check `enable_google_project` not already true. | `"Update {team-key}: add Google Cloud Platform project"` |
 | 9 | Remove GCP project | (just team key) | Warn: Corpus will destroy the GCP project on next apply. Require explicit confirmation. | `"Update {team-key}: remove Google Cloud Platform project"` |
 | 11 | Add Cloud SQL | Regions (`us-east1`/`us-east4`) · database version (default `POSTGRES_16`) · machine tier (default `db-f1-micro`) | If `platform_managed_project` missing, ask to add it. Show existing config if `cloud_sql` already set. | `"Update {team-key}: add Cloud SQL"` |
-| 13 | Add/remove namespace | Which namespace name(s)? · `istio_injection` per namespace (`enabled`/`disabled`, default `disabled`) · for mesh-enabled namespaces, optional `routes` (per route: `service`, `port`, optional `path` default `/`) | Requires `platform_managed_project.kubernetes_engine` to exist and the team to have cluster locations — if missing, ask to configure GKE first. Show current namespaces before asking what to add or remove; require explicit confirmation before overwriting an existing namespace entry. Routes may only be declared on mesh-enabled namespaces. Warn before removing: Pneuma will destroy the namespace on next apply. | `"Update {team-key}: add/remove namespace {name}"` |
+| 13 | Add/remove namespace | Which namespace name(s)? · `istio_injection` per namespace (`enabled`/`disabled`, default `disabled`) · for mesh-enabled namespaces, optional `routes` (per route: `service`, `port`, optional `path` default `/`) · for mesh-enabled namespaces with routes, optional gateway auth `route_auth_policies` (per existing route: `enforced` default `true`, `required_groups`, `required_roles`, `public_paths`) | Requires `platform_managed_project.kubernetes_engine` to exist and the team to have cluster locations — if missing, ask to configure GKE first. Show current namespaces before asking what to add or remove; require explicit confirmation before overwriting an existing namespace entry. Routes and route auth policies may only be declared on mesh-enabled namespaces. Route auth policy keys must match existing route names. Warn before removing: Pneuma will destroy the namespace on next apply. | `"Update {team-key}: add/remove namespace {name}"` |
+| 14 | Add/update/remove gateway route auth policy | Which namespace? · which existing route(s)? · enforce auth? (default `true`) · when enforced, required groups and/or roles · optional public paths under the route path prefix | Requires an existing mesh-enabled namespace with at least one route. Do not allow auth policies on non-mesh namespaces or for route names that do not exist. Explain that Logos declares centralized gateway auth intent and Pneuma enforces it centrally with Keycloak JWT validation and OAuth2 Proxy group/role authorization. Require explicit confirmation before removing a policy or setting `enforced = false`. | `"Update {team-key}: update gateway route auth for {namespace}"` |
 
 ### Operation 12 — Open a GitHub issue
 
@@ -284,6 +295,13 @@ These are conversation-layer conventions Logos applies on top of the schema:
 **Identity validation** (applied to every email or username collected):
 - Emails (Datadog, Google groups) — must end in `@osinfra.io`. Reject: *"`{email}` is not a valid osinfra.io address. All Datadog and Google Cloud Platform group members must use their `@osinfra.io` address."*
 - GitHub usernames — must exist on GitHub and be members of the `osinfra-io` org. Reject: *"`{username}` doesn't appear to be a member of the osinfra-io GitHub organization. Please check the username and confirm they've been added to the org before proceeding."*
+
+**Gateway route auth policies:**
+- `route_auth_policies` belongs on a Kubernetes namespace and is keyed by existing route names from that namespace's `routes` map.
+- Only collect or set it for namespaces with `istio_injection = enabled` and at least one route.
+- Treat `enforced` as `true` unless the user explicitly asks to disable enforcement. Enforced policies must include at least one required group or required role.
+- Disabled policies (`enforced = false`) must not include `required_groups`, `required_roles`, or `public_paths`.
+- Public paths are unauthenticated exceptions and must be unique absolute non-root paths with no whitespace, under the route path prefix.
 
 ---
 
