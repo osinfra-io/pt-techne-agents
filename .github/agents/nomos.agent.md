@@ -142,7 +142,7 @@ If the user configures Artifact Registry groups or any repo with `enable_google_
 
 ##### Cloud SQL
 
-Only if the team needs a managed PostgreSQL instance. Ask **regions** (only `us-east1` and `us-east4` are supported; default `us-east1`), **database version** (default `POSTGRES_16`), and **machine tier** (default `db-f1-micro`; suggest `db-custom-2-13312` for production-grade workloads).
+Only if the team needs a managed PostgreSQL instance. A team may declare one or more instances, each keyed by a team-chosen **instance name** (e.g. `authentik`) — ask for the instance name first. For each instance ask **regions** (only `us-east1` and `us-east4` are supported; default `us-east1`), **database version** (default `POSTGRES_16`), and **machine tier** (default `db-f1-micro`; suggest `db-custom-2-13312` for production-grade workloads).
 
 ##### Additional Google Cloud Platform projects
 
@@ -197,7 +197,7 @@ All mutations follow the same pattern:
 | 7 | Enable/disable feature flag | Which flag? (menu: team-level, project-level, repo-level) · Enable or disable? | Dependency warnings: `enable_opentofu_state_management` requires `enable_workflows`; `enable_google_wif_service_account` requires `enable_workflows`; `enable_datadog_apm` requires `enable_datadog` + `kubernetes_engine`. Only show project-level flags when `platform_managed_project` exists; only show `enable_datadog_apm` when `enable_datadog` is true and `kubernetes_engine` is configured. | `"Update {team-key}: {enable/disable} {flag-name}"` |
 | 8 | Add GCP project | Optional API services · enable Datadog? | Check `enable_google_project` not already true. | `"Update {team-key}: add Google Cloud Platform project"` |
 | 9 | Remove GCP project | (just team key) | Warn: Corpus will destroy the GCP project on next apply. Require explicit confirmation. | `"Update {team-key}: remove Google Cloud Platform project"` |
-| 11 | Add Cloud SQL | Regions (`us-east1`/`us-east4`) · database version (default `POSTGRES_16`) · machine tier (default `db-f1-micro`) | If `platform_managed_project` missing, ask to add it. Show existing config if `cloud_sql` already set. | `"Update {team-key}: add Cloud SQL"` |
+| 11 | Add Cloud SQL | Instance name (team-chosen map key, e.g. `authentik`) · regions (`us-east1`/`us-east4`) · database version (default `POSTGRES_16`) · machine tier (default `db-f1-micro`) | If `platform_managed_project` missing, ask to add it. Show existing config if `cloud_sql` already set. A team may have multiple named instances. | `"Update {team-key}: add Cloud SQL"` |
 | 13 | Add/remove namespace | Which namespace name(s)? · `istio_injection` per namespace (`enabled`/`disabled`, default `disabled`) · for mesh-enabled namespaces, optional `routes` (per route: `service`, `port`, optional `path` default `/`) | Requires `platform_managed_project.kubernetes_engine` to exist and the team to have cluster locations — if missing, ask to configure GKE first. Show current namespaces before asking what to add or remove; require explicit confirmation before overwriting an existing namespace entry. Routes may only be declared on mesh-enabled namespaces. Warn before removing: Pneuma will destroy the namespace on next apply. | `"Update {team-key}: add/remove namespace {name}"` |
 
 ### Operation 12 — Open a GitHub issue
