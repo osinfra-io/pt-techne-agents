@@ -48,7 +48,8 @@ tool responses are simulated inline.
 | Gateway auth — browser route | Existing mesh route auth is summarized; no PR before confirmation |
 | Gateway auth — missing principals | `browser` mode requires at least one group or role |
 | Gateway auth — non-mesh namespace | Auth policies are rejected when Istio injection is disabled |
-| Gateway auth — unknown route | Policy keys must match an existing route name |
+| Gateway auth — unknown route | Policy keys must match an existing route (or one added in the same operation); unknown keys are rejected |
+| Gateway auth — same-operation route | A route and a policy referencing it can be added together in one operation |
 | Gateway auth — public paths | Public paths must stay under the route path prefix |
 
 ## Adding Scenarios

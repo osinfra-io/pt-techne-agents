@@ -92,13 +92,15 @@ tests:
           return !names.includes('open_team_pr');
       - type: javascript
         value: |
-          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const _content = Array.isArray(output) ? output : output?.content;
+          const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
           return lower.includes('team') || lower.includes('key') || lower.includes('name') || lower.includes('onboard');
       - type: javascript
         value: |
           // No question bundling — asking for team key should not also ask about Datadog, GitHub, or Google groups
-          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const _content = Array.isArray(output) ? output : output?.content;
+          const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const hasDatadog = /datadog/i.test(text);
           const hasGitHub = /github\s+(username|maintainer|member)/i.test(text);
           const hasGoogle = /google\s+(group|cloud|identity)/i.test(text);
@@ -190,12 +192,14 @@ tests:
           return !names.includes('open_team_pr');
       - type: javascript
         value: |
-          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const _content = Array.isArray(output) ? output : output?.content;
+          const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
           return lower.includes('st-nova') || lower.includes('nova') || lower.includes('summary') || lower.includes('confirm') || lower.includes('proceed');
       - type: javascript
         value: |
-          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const _content = Array.isArray(output) ? output : output?.content;
+          const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
           // Accept either explicit enumeration of roles/envs OR shorthand references
           const hasRoles = ['admin', 'reader', 'writer'].every(r => lower.includes(r));
@@ -541,7 +545,8 @@ tests:
           const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
           const raw = typeof output === 'string' ? output : JSON.stringify(output);
           const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
-          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const _content = Array.isArray(output) ? output : output?.content;
+          const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
           const isGatheringText = lower.includes('description') || lower.includes('topic') || lower.includes('flag') || lower.includes('feature') || lower.includes('suggest') || lower.includes('check') || lower.includes('exist') || lower.includes('already') || lower.includes('look');
           const isGatheringTool = names.some(n => n && n !== 'open_team_pr');
@@ -624,7 +629,8 @@ tests:
       - type: javascript
         value: |
           // Agent should show a change summary and ask for confirmation before proceeding
-          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const _content = Array.isArray(output) ? output : output?.content;
+          const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
           return lower.includes('confirm') || lower.includes('proceed') || lower.includes('summary') || lower.includes('shall i') || lower.includes('go ahead') || lower.includes('pull request') || lower.includes('open a pr');
 
@@ -702,7 +708,8 @@ tests:
           return !names.includes('open_team_pr');
       - type: javascript
         value: |
-          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const _content = Array.isArray(output) ? output : output?.content;
+          const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
           return (lower.includes('route_auth_policies') || lower.includes('gateway auth') || lower.includes('auth policy')) &&
             lower.includes('st-ethos-users') &&
@@ -744,7 +751,8 @@ tests:
           return !names.includes('open_team_pr');
       - type: javascript
         value: |
-          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const _content = Array.isArray(output) ? output : output?.content;
+          const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
           return (lower.includes('group') || lower.includes('role')) &&
             (lower.includes('required') || lower.includes('at least one') || lower.includes('fail-closed'));
@@ -784,7 +792,8 @@ tests:
           return !names.includes('open_team_pr');
       - type: javascript
         value: |
-          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const _content = Array.isArray(output) ? output : output?.content;
+          const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
           return (lower.includes('mesh') || lower.includes('istio')) &&
             lower.includes('enabled') &&
@@ -825,7 +834,8 @@ tests:
           return !names.includes('open_team_pr');
       - type: javascript
         value: |
-          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const _content = Array.isArray(output) ? output : output?.content;
+          const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
           return lower.includes('route') &&
             (lower.includes('exist') || lower.includes('known') || lower.includes('available') || lower.includes('match')) &&
@@ -866,9 +876,53 @@ tests:
           return !names.includes('open_team_pr');
       - type: javascript
         value: |
-          const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof output?.content === 'string' ? output.content : ''));
+          const _content = Array.isArray(output) ? output : output?.content;
+          const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
           return lower.includes('public') &&
             lower.includes('/app') &&
             (lower.includes('under') || lower.includes('prefix')) &&
             (lower.includes('/healthz') || lower.includes('healthz'));
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # TEST 12: GATEWAY ROUTE AUTH — a route and its policy can be added together
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - description: "Multi-turn gateway auth: accepts a policy for a route added in the same operation"
+    vars:
+      conversation:
+        - role: user
+          content: Add gateway auth to st-ethos.
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_01
+              name: get_team
+              input:
+                team_key: st-ethos
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_01
+              content: >-
+                {"team_key":"st-ethos","platform_managed_project":{"kubernetes_engine":{"namespaces":{"app":{"istio_injection":"enabled","routes":{"app":{"path":"/app","port":8080,"service":"app"}}}}}}}
+        - role: assistant
+          content: "The mesh-enabled `app` namespace has one route: `app`. Routes and their auth policies are collected together and applied as one spec, so you can add a new route and its policy at once."
+        - role: user
+          content: Add route api at /api on service api port 8080 and a browser policy for api requiring group st-ethos-users.
+    assert:
+      - type: javascript
+        value: |
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const raw = typeof output === 'string' ? output : JSON.stringify(output);
+          const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
+          return !names.includes('open_team_pr');
+      - type: javascript
+        value: |
+          const _content = Array.isArray(output) ? output : output?.content;
+          const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
+          const lower = text.toLowerCase();
+          return lower.includes('api') &&
+            lower.includes('st-ethos-users') &&
+            (lower.includes('route_auth_policies') || lower.includes('gateway auth') || lower.includes('auth policy') || lower.includes('policy')) &&
+            (lower.includes('confirm') || lower.includes('summary') || lower.includes('pull request') || lower.includes('proceed'));
