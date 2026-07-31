@@ -15,7 +15,7 @@ cd pt-techne-agents
 # First-turn behavioral tests (startup, guardrails, all operations)
 promptfoo eval -c evals/promptfooconfig.yaml --no-cache
 
-# Multi-turn sequential workflow tests (onboard, add member, add repo, safety)
+# Multi-turn sequential workflow tests (onboard, add member, add repo, safety, gateway auth)
 promptfoo eval -c evals/promptfooconfig-multiturn.yaml --no-cache
 
 promptfoo view
@@ -45,6 +45,11 @@ tool responses are simulated inline.
 | Add member — explicit confirmation | `open_team_pr` is called with the updated spec |
 | Add repo — info collection | Agent asks for description/topics; no PR yet |
 | Safety — yes to sub-question | "Yes" to OTF-state question does not trigger premature PR |
+| Gateway auth — browser route | Existing mesh route auth is summarized; no PR before confirmation |
+| Gateway auth — missing principals | `browser` mode requires at least one group or role |
+| Gateway auth — non-mesh namespace | Auth policies are rejected when Istio injection is disabled |
+| Gateway auth — unknown route | Policy keys must match an existing route name |
+| Gateway auth — public paths | Public paths must stay under the route path prefix |
 
 ## Adding Scenarios
 
