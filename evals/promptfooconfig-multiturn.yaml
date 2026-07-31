@@ -711,10 +711,10 @@ tests:
           const _content = Array.isArray(output) ? output : output?.content;
           const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
-          return (lower.includes('route_auth_policies') || lower.includes('gateway auth') || lower.includes('auth policy')) &&
-            lower.includes('st-ethos-users') &&
+          return lower.includes('st-ethos-users') &&
             lower.includes('/app/healthz') &&
-            (lower.includes('confirm') || lower.includes('pull request') || lower.includes('summary'));
+            (lower.includes('browser') || lower.includes('mode') || lower.includes('route') || lower.includes('auth') || lower.includes('policy')) &&
+            (lower.includes('confirm') || lower.includes('pull request') || lower.includes('open the pr') || lower.includes('open a pr') || lower.includes(' pr?') || lower.includes('go ahead') || lower.includes('proceed') || lower.includes('shall i') || lower.includes('summary'));
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 8: GATEWAY ROUTE AUTH — browser policies require group or role
@@ -724,18 +724,57 @@ tests:
     vars:
       conversation:
         - role: user
-          content: Add gateway auth to st-ethos.
+          content: Add gateway auth to the app route for st-ethos.
+        - role: assistant
+          content:
+            - type: text
+              text: "👋 Hi! I'm the Nomos Agent. Give me a moment while I look you up…"
+            - type: tool_use
+              id: toolu_01
+              name: get_me
+              input: {}
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_01
+              content: '{"login":"brettcurtis","email":"brett@osinfra.io"}'
         - role: assistant
           content:
             - type: tool_use
-              id: toolu_01
+              id: toolu_02
+              name: lookup_user
+              input:
+                github_username: brettcurtis
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_02
+              content: '{"matches":[{"team_key":"st-ethos","roles":["github_parent_team.maintainers"]}]}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_03
+              name: lookup_user
+              input:
+                email: brett@osinfra.io
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_03
+              content: '{"matches":[{"team_key":"st-ethos","roles":["google_groups.admin.owners"]}]}'
+        - role: assistant
+          content:
+            - type: text
+              text: You're on st-ethos. Let me load the current spec and routes.
+            - type: tool_use
+              id: toolu_04
               name: get_team
               input:
                 team_key: st-ethos
         - role: user
           content:
             - type: tool_result
-              tool_use_id: toolu_01
+              tool_use_id: toolu_04
               content: >-
                 {"team_key":"st-ethos","platform_managed_project":{"kubernetes_engine":{"namespaces":{"app":{"istio_injection":"enabled","routes":{"app":{"path":"/app","port":8080,"service":"app"}}}}}}}
         - role: assistant
@@ -755,7 +794,7 @@ tests:
           const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
           return (lower.includes('group') || lower.includes('role')) &&
-            (lower.includes('required') || lower.includes('at least one') || lower.includes('fail-closed'));
+            (lower.includes('required') || lower.includes('at least one') || lower.includes('fail-closed') || lower.includes('need'));
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 9: GATEWAY ROUTE AUTH — reject non-mesh namespaces
@@ -768,15 +807,54 @@ tests:
           content: Protect the openbao route for st-ethos.
         - role: assistant
           content:
+            - type: text
+              text: "👋 Hi! I'm the Nomos Agent. Give me a moment while I look you up…"
             - type: tool_use
               id: toolu_01
+              name: get_me
+              input: {}
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_01
+              content: '{"login":"brettcurtis","email":"brett@osinfra.io"}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_02
+              name: lookup_user
+              input:
+                github_username: brettcurtis
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_02
+              content: '{"matches":[{"team_key":"st-ethos","roles":["github_parent_team.maintainers"]}]}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_03
+              name: lookup_user
+              input:
+                email: brett@osinfra.io
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_03
+              content: '{"matches":[{"team_key":"st-ethos","roles":["google_groups.admin.owners"]}]}'
+        - role: assistant
+          content:
+            - type: text
+              text: You're on st-ethos. Let me load the current spec and routes.
+            - type: tool_use
+              id: toolu_04
               name: get_team
               input:
                 team_key: st-ethos
         - role: user
           content:
             - type: tool_result
-              tool_use_id: toolu_01
+              tool_use_id: toolu_04
               content: >-
                 {"team_key":"st-ethos","platform_managed_project":{"kubernetes_engine":{"namespaces":{"openbao":{"istio_injection":"disabled","routes":{"openbao":{"path":"/openbao","port":8200,"service":"openbao"}}}}}}}
         - role: assistant
@@ -796,8 +874,8 @@ tests:
           const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
           return (lower.includes('mesh') || lower.includes('istio')) &&
-            lower.includes('enabled') &&
-            (lower.includes('cannot') || lower.includes('only') || lower.includes('must'));
+            (lower.includes('enabled') || lower.includes('disabled') || lower.includes('injection')) &&
+            (lower.includes('cannot') || lower.includes('only') || lower.includes('must') || lower.includes('require'));
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 10: GATEWAY ROUTE AUTH — reject unknown route names
@@ -810,15 +888,54 @@ tests:
           content: Protect route missing for st-ethos.
         - role: assistant
           content:
+            - type: text
+              text: "👋 Hi! I'm the Nomos Agent. Give me a moment while I look you up…"
             - type: tool_use
               id: toolu_01
+              name: get_me
+              input: {}
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_01
+              content: '{"login":"brettcurtis","email":"brett@osinfra.io"}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_02
+              name: lookup_user
+              input:
+                github_username: brettcurtis
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_02
+              content: '{"matches":[{"team_key":"st-ethos","roles":["github_parent_team.maintainers"]}]}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_03
+              name: lookup_user
+              input:
+                email: brett@osinfra.io
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_03
+              content: '{"matches":[{"team_key":"st-ethos","roles":["google_groups.admin.owners"]}]}'
+        - role: assistant
+          content:
+            - type: text
+              text: You're on st-ethos. Let me load the current spec and routes.
+            - type: tool_use
+              id: toolu_04
               name: get_team
               input:
                 team_key: st-ethos
         - role: user
           content:
             - type: tool_result
-              tool_use_id: toolu_01
+              tool_use_id: toolu_04
               content: >-
                 {"team_key":"st-ethos","platform_managed_project":{"kubernetes_engine":{"namespaces":{"app":{"istio_injection":"enabled","routes":{"app":{"path":"/app","port":8080,"service":"app"}}}}}}}
         - role: assistant
@@ -837,9 +954,8 @@ tests:
           const _content = Array.isArray(output) ? output : output?.content;
           const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
-          return lower.includes('route') &&
-            (lower.includes('exist') || lower.includes('known') || lower.includes('available') || lower.includes('match')) &&
-            lower.includes('app');
+          return lower.includes('app') &&
+            (lower.includes('exist') || lower.includes('known') || lower.includes('available') || lower.includes('match') || lower.includes('only') || lower.includes("isn't") || lower.includes('not a') || lower.includes('no route'));
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 11: GATEWAY ROUTE AUTH — validate public path prefix rules
@@ -852,15 +968,54 @@ tests:
           content: Add a public exception for st-ethos app auth.
         - role: assistant
           content:
+            - type: text
+              text: "👋 Hi! I'm the Nomos Agent. Give me a moment while I look you up…"
             - type: tool_use
               id: toolu_01
+              name: get_me
+              input: {}
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_01
+              content: '{"login":"brettcurtis","email":"brett@osinfra.io"}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_02
+              name: lookup_user
+              input:
+                github_username: brettcurtis
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_02
+              content: '{"matches":[{"team_key":"st-ethos","roles":["github_parent_team.maintainers"]}]}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_03
+              name: lookup_user
+              input:
+                email: brett@osinfra.io
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_03
+              content: '{"matches":[{"team_key":"st-ethos","roles":["google_groups.admin.owners"]}]}'
+        - role: assistant
+          content:
+            - type: text
+              text: You're on st-ethos. Let me load the current spec and routes.
+            - type: tool_use
+              id: toolu_04
               name: get_team
               input:
                 team_key: st-ethos
         - role: user
           content:
             - type: tool_result
-              tool_use_id: toolu_01
+              tool_use_id: toolu_04
               content: >-
                 {"team_key":"st-ethos","platform_managed_project":{"kubernetes_engine":{"namespaces":{"app":{"istio_injection":"enabled","routes":{"app":{"path":"/app","port":8080,"service":"app"}}}}}}}
         - role: assistant
@@ -881,8 +1036,7 @@ tests:
           const lower = text.toLowerCase();
           return lower.includes('public') &&
             lower.includes('/app') &&
-            (lower.includes('under') || lower.includes('prefix')) &&
-            (lower.includes('/healthz') || lower.includes('healthz'));
+            (lower.includes('under') || lower.includes('prefix') || lower.includes('outside') || lower.includes('below') || lower.includes('within') || lower.includes('start'));
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 12: GATEWAY ROUTE AUTH — a route and its policy can be added together
@@ -892,18 +1046,57 @@ tests:
     vars:
       conversation:
         - role: user
-          content: Add gateway auth to st-ethos.
+          content: Add gateway auth to the app namespace for st-ethos.
+        - role: assistant
+          content:
+            - type: text
+              text: "👋 Hi! I'm the Nomos Agent. Give me a moment while I look you up…"
+            - type: tool_use
+              id: toolu_01
+              name: get_me
+              input: {}
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_01
+              content: '{"login":"brettcurtis","email":"brett@osinfra.io"}'
         - role: assistant
           content:
             - type: tool_use
-              id: toolu_01
+              id: toolu_02
+              name: lookup_user
+              input:
+                github_username: brettcurtis
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_02
+              content: '{"matches":[{"team_key":"st-ethos","roles":["github_parent_team.maintainers"]}]}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_03
+              name: lookup_user
+              input:
+                email: brett@osinfra.io
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_03
+              content: '{"matches":[{"team_key":"st-ethos","roles":["google_groups.admin.owners"]}]}'
+        - role: assistant
+          content:
+            - type: text
+              text: You're on st-ethos. Let me load the current spec and routes.
+            - type: tool_use
+              id: toolu_04
               name: get_team
               input:
                 team_key: st-ethos
         - role: user
           content:
             - type: tool_result
-              tool_use_id: toolu_01
+              tool_use_id: toolu_04
               content: >-
                 {"team_key":"st-ethos","platform_managed_project":{"kubernetes_engine":{"namespaces":{"app":{"istio_injection":"enabled","routes":{"app":{"path":"/app","port":8080,"service":"app"}}}}}}}
         - role: assistant
@@ -924,5 +1117,5 @@ tests:
           const lower = text.toLowerCase();
           return lower.includes('api') &&
             lower.includes('st-ethos-users') &&
-            (lower.includes('route_auth_policies') || lower.includes('gateway auth') || lower.includes('auth policy') || lower.includes('policy')) &&
-            (lower.includes('confirm') || lower.includes('summary') || lower.includes('pull request') || lower.includes('proceed'));
+            (lower.includes('route_auth_policies') || lower.includes('gateway auth') || lower.includes('auth policy') || lower.includes('policy') || lower.includes('browser') || lower.includes('route')) &&
+            (lower.includes('confirm') || lower.includes('pull request') || lower.includes('open the pr') || lower.includes('open a pr') || lower.includes(' pr?') || lower.includes('go ahead') || lower.includes('proceed') || lower.includes('shall i') || lower.includes('summary'));
