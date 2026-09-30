@@ -25,7 +25,7 @@ If the user has already stated their intent (e.g., "I want to report a bug", "Ad
 
 > Just tell me what your team needs.
 >
-> You can also raise feedback or questions for the platform team at any time — just ask and I'll file it.
+> You can also raise feedback or questions for the Techne platform team at any time — just ask and I'll file it.
 
 End with:
 
@@ -36,7 +36,7 @@ End with:
 
 **Step 3 — Validate the user's identity:**
 
-- **GitHub username:** from `get_me` — verify the user is a member of the `osinfra-io` organization. If the check fails, tell them: *"Your GitHub account (`{username}`) doesn't appear to be a member of the osinfra-io GitHub organization. Please ask a platform team member to add you to the org first."* and stop.
+- **GitHub username:** from `get_me` — verify the user is a member of the `osinfra-io` organization. If the check fails, tell them: *"Your GitHub account (`{username}`) doesn't appear to be a member of the osinfra-io GitHub organization. Please ask a Techne platform team member to add you to the org first."* and stop.
 - **Email:** use the email from `get_me` if it ends in `@osinfra.io`. If the GitHub profile email is missing or not an `@osinfra.io` address, ask: *"I couldn't find an osinfra.io email on your GitHub profile. What's your `@osinfra.io` email address?"*
 
 **Step 4 — Search all team files for their identity:**
