@@ -1165,7 +1165,19 @@ tests:
           const _content = Array.isArray(output) ? output : output?.content;
           const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
-          const clauses = lower.replace(/[`*]/g, '').split(/[;\n.!?]+/);
+          const normalized = lower.replace(/[`*]/g, '');
+          const clauses = normalized.split(/[;\n.!?]+/);
+          let policySection = '';
+          for (const line of normalized.split('\n')) {
+            if (!line.trim()) continue;
+            if (/^\s*[-+]\s/.test(line)) {
+              if (policySection) policySection += ' ' + line;
+            } else {
+              if (policySection) clauses.push(policySection);
+              policySection = /\b(?:auth|browser)\s+policy\b.*\bapi\b/.test(line) ? line : '';
+            }
+          }
+          if (policySection) clauses.push(policySection);
           const apiGroupPolicy = clauses.some(clause =>
             /\bapi\b/.test(clause) &&
             /\b(?:required_groups|(?:required|allowed|requiring|requires)\s+(?:(?:authentik|built-in)\s+)?groups?)\s*(?:[:=|]\s*)?(?:\[\s*)?["']?all\b/.test(clause));
