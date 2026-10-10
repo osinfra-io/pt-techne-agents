@@ -1174,7 +1174,7 @@ tests:
               if (policySection) policySection += ' ' + line;
             } else {
               if (policySection) clauses.push(policySection);
-              policySection = /\b(?:auth|browser)\s+policy\b.*\bapi\b/.test(line) ? line : '';
+              policySection = /\b(?:(?:auth|browser)\s+policy\b.*\bapi\b|(?:new\s+)?route\s+(?:[-—:]\s*)?api\b)/.test(line) ? line : '';
             }
           }
           if (policySection) clauses.push(policySection);
