@@ -1150,9 +1150,9 @@ tests:
               content: >-
                 {"team_key":"st-ethos","platform_managed_project":{"kubernetes_engine":{"namespaces":{"app":{"istio_injection":"enabled","routes":{"app":{"path":"/app","port":8080,"service":"app"}}}}}}}
         - role: assistant
-          content: "The mesh-enabled `app` namespace has one route: `app`. Routes and their auth policies are collected together and applied as one spec, so you can add a new route and its policy at once."
+          content: "The mesh-enabled `app` namespace has one route: `app`. There are no existing browser policies in any namespace, so there is no shared-host policy conflict. The built-in Authentik group `all` is available for baseline access. Routes and their auth policies are collected together and applied as one spec, so you can add a new route and its policy at once."
         - role: user
-          content: Add route api at /api on service api port 8080 and a browser policy for api requiring group st-ethos-users.
+          content: Add route api at /api on service api port 8080 and a browser policy for api requiring the built-in group all.
     assert:
       - type: javascript
         value: |
@@ -1166,6 +1166,6 @@ tests:
           const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
           return lower.includes('api') &&
-            lower.includes('st-ethos-users') &&
+            /\ball\b/.test(lower) &&
             (lower.includes('route_auth_policies') || lower.includes('gateway auth') || lower.includes('auth policy') || lower.includes('policy') || lower.includes('browser') || lower.includes('route')) &&
             (lower.includes('confirm') || lower.includes('pull request') || lower.includes('open the pr') || lower.includes('open a pr') || lower.includes(' pr?') || lower.includes('go ahead') || lower.includes('proceed') || lower.includes('shall i') || lower.includes('summary'));
