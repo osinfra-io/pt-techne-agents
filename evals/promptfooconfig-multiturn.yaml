@@ -1165,7 +1165,10 @@ tests:
           const _content = Array.isArray(output) ? output : output?.content;
           const text = typeof output === 'string' ? output : (Array.isArray(_content) ? _content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof _content === 'string' ? _content : ''));
           const lower = text.toLowerCase();
-          return lower.includes('api') &&
-            /\ball\b/.test(lower) &&
+          const clauses = lower.replace(/[`*]/g, '').split(/[;\n.!?]+/);
+          const apiGroupPolicy = clauses.some(clause =>
+            /\bapi\b/.test(clause) &&
+            /\b(?:required_groups|(?:required|allowed|requiring|requires)\s+(?:(?:authentik|built-in)\s+)?groups?)\s*(?:[:=|]\s*)?(?:\[\s*)?["']?all\b/.test(clause));
+          return apiGroupPolicy &&
             (lower.includes('route_auth_policies') || lower.includes('gateway auth') || lower.includes('auth policy') || lower.includes('policy') || lower.includes('browser') || lower.includes('route')) &&
             (lower.includes('confirm') || lower.includes('pull request') || lower.includes('open the pr') || lower.includes('open a pr') || lower.includes(' pr?') || lower.includes('go ahead') || lower.includes('proceed') || lower.includes('shall i') || lower.includes('summary'));
