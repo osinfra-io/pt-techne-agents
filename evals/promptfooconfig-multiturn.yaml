@@ -33,6 +33,56 @@ providers:
 #   const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (output?.content || ''));
 
 tests:
+  - description: "Startup context: includes declared Authentik groups and environments alongside existing systems"
+    vars:
+      conversation:
+        - role: user
+          content: "Show my team memberships. My identity and organization membership have already been validated."
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_github
+              name: lookup_user
+              input:
+                github_username: alice-dev
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_github
+              content: '{"matches":[{"team_key":"pt-pneuma","via":"github_username","system":"github","scope":"team-parent","membership":"member"}]}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_email
+              name: lookup_user
+              input:
+                email: alice@osinfra.io
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_email
+              content: '{"matches":[{"team_key":"pt-pneuma","via":"email","system":"authentik","scope":"application","subject":"agentgateway-admins/sandbox","membership":"member"}]}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_team
+              name: get_team
+              input:
+                team_key: pt-pneuma
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_team
+              content: '{"spec":{"team_key":"pt-pneuma","display_name":"Pneuma","authentik_groups":{"agentgateway-admins":{"label":"agentgateway Admins","description":"agentgateway UI access","members":{"sandbox":["alice@osinfra.io"]}}}}}'
+    assert:
+      - type: javascript
+        value: |
+          const content = Array.isArray(output) ? output : output?.content;
+          const text = typeof output === 'string' ? output : (Array.isArray(content) ? content.filter(c => c.type === 'text').map(c => c.text).join('\n') : (typeof content === 'string' ? content : ''));
+          const rows = text.split('\n').filter(line => /^\s*\|/.test(line));
+          const header = rows.find(line => ['Team', 'GitHub', 'Datadog', 'Google Cloud Platform', 'Authentik'].every(name => line.includes(name)));
+          return Boolean(header) && rows.some(line => line.includes('pt-pneuma: agentgateway Admins') && line.includes('sandbox'));
+
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 1: ONBOARD — after identity lookup, asks for team key (no PR)
   # ═══════════════════════════════════════════════════════════════════════════
