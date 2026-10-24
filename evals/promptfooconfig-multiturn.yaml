@@ -223,11 +223,26 @@ tests:
         - role: user
           content: Same in all environments — alice@osinfra.io as owner for all groups.
         - role: assistant
+          content: "Who should have OpenBao Secret Reader access in sandbox, non-production, and production? This is separate from Google IAM; I won't reuse those memberships unless you explicitly confirm the same members."
+        - role: user
+          content: No readers for now.
+        - role: assistant
+          content: "Who should have OpenBao Secret Writer access in sandbox, non-production, and production? Empty membership is allowed."
+        - role: user
+          content: No writers for now.
+        - role: assistant
+          content: "Who should have OpenBao Secret Admin access in sandbox, non-production, and production? Admin access is limited to this team's secrets."
+        - role: user
+          content: No admins for now.
+        - role: assistant
           content: >-
             ✅ Required fields are all set for **st-nova**:
             - Datadog admin: alice@osinfra.io
             - GitHub maintainer: alice-dev
             - Google groups owners (admin/reader/writer, all environments): alice@osinfra.io
+            - OpenBao Secret Readers: none in all environments
+            - OpenBao Secret Writers: none in all environments
+            - OpenBao Secret Admins: none in all environments
 
             Would you like to configure any optional enhancements — GitHub Actions/OIDC, repositories,
             GKE clusters, Cloud SQL, or additional GCP projects — or proceed straight to the summary?
@@ -257,6 +272,48 @@ tests:
           const hasAllEnvs = lower.includes('all environments') || lower.includes('all three environments') || lower.includes('same') || lower.includes('across all');
           const hasShorthand = (lower.includes('all groups') || lower.includes('all nine') || lower.includes('google groups') || lower.includes('google cloud identity')) && lower.includes('owner');
           return (hasRoles && (hasEnvs || hasAllEnvs)) || hasShorthand;
+
+  - description: "Multi-turn onboard: asks for OpenBao access separately per environment"
+    vars:
+      conversation:
+        - role: user
+          content: "Onboard a new team."
+        - role: assistant
+          content: "What is the team key and display name?"
+        - role: user
+          content: "Team key st-nova, display name Nova."
+        - role: assistant
+          content: "What is the team description?"
+        - role: user
+          content: "Nova team for stream-aligned delivery workloads."
+        - role: assistant
+          content: "Who should be the Datadog admin?"
+        - role: user
+          content: "alice@osinfra.io"
+        - role: assistant
+          content: "Who should maintain the GitHub parent team?"
+        - role: user
+          content: "alice-dev"
+        - role: assistant
+          content: "Should the Google Cloud Identity group membership be the same in all environments?"
+        - role: user
+          content: "Yes, alice@osinfra.io for all Google roles in sandbox, non-production, and production."
+    assert:
+      - type: javascript
+        value: |
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const raw = typeof output === 'string' ? output : JSON.stringify(output);
+          const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
+          return !names.includes('open_team_pr');
+      - type: javascript
+        value: |
+          const content = Array.isArray(output) ? output : output?.content;
+          const text = typeof output === 'string' ? output : (Array.isArray(content) ? content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof content === 'string' ? content : ''));
+          const lower = text.toLowerCase();
+          const hasOpenBaoReaderQuestion = lower.includes('openbao') && lower.includes('reader') &&
+            ['sandbox', 'non-production', 'production'].every(environment => lower.includes(environment));
+          const separatesAccess = lower.includes('separate') || lower.includes('independent') || lower.includes('own membership');
+          return hasOpenBaoReaderQuestion && separatesAccess;
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 3: ONBOARD — explicit "yes" after summary triggers PR creation
@@ -321,6 +378,18 @@ tests:
         - role: user
           content: Yes — alice@osinfra.io as owner for all groups in all environments.
         - role: assistant
+          content: "Who should have OpenBao Secret Reader access in sandbox, non-production, and production? This is separate from Google IAM; I won't reuse those memberships unless you explicitly confirm the same members."
+        - role: user
+          content: No readers for now.
+        - role: assistant
+          content: "Who should have OpenBao Secret Writer access in sandbox, non-production, and production? Empty membership is allowed."
+        - role: user
+          content: No writers for now.
+        - role: assistant
+          content: "Who should have OpenBao Secret Admin access in sandbox, non-production, and production? Admin access is limited to this team's secrets."
+        - role: user
+          content: No admins for now.
+        - role: assistant
           content: No optional enhancements — proceeding to summary.
         - role: user
           content: Yes, skip optional enhancements.
@@ -337,6 +406,9 @@ tests:
             | Datadog admin | alice@osinfra.io |
             | GitHub maintainer | alice-dev |
             | Google groups owners | alice@osinfra.io (admin/reader/writer, all environments) |
+            | OpenBao Secret Readers | None in all environments |
+            | OpenBao Secret Writers | None in all environments |
+            | OpenBao Secret Admins | None in all environments |
 
             This will open three pull requests: **PR 1** adds the GitHub environment to pt-logos,
             **PR 2** onboards the team, and **PR 3** creates the docs page.
