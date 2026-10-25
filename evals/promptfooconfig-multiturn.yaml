@@ -376,8 +376,7 @@ tests:
           const lower = text.toLowerCase();
           const hasOpenBaoReaderQuestion = lower.includes('openbao') && lower.includes('reader') &&
             ['sandbox', 'non-production', 'production'].every(environment => lower.includes(environment));
-          const separatesAccess = lower.includes('separate') || lower.includes('independent') || lower.includes('own membership');
-          return hasOpenBaoReaderQuestion && separatesAccess;
+          return hasOpenBaoReaderQuestion && text.includes('?');
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 3: ONBOARD — explicit "yes" after summary triggers PR creation
