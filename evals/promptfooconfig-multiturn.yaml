@@ -279,6 +279,43 @@ tests:
         - role: user
           content: "Onboard a new team."
         - role: assistant
+          content:
+            - type: text
+              text: "Hi! I'm the Nomos Agent. Give me a moment while I look you up."
+            - type: tool_use
+              id: toolu_openbao_identity
+              name: get_me
+              input: {}
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_openbao_identity
+              content: '{"login":"alice-dev","email":"alice@osinfra.io"}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_openbao_github
+              name: lookup_user
+              input:
+                github_username: alice-dev
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_openbao_github
+              content: '{"matches":[]}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_openbao_email
+              name: lookup_user
+              input:
+                email: alice@osinfra.io
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_openbao_email
+              content: '{"matches":[]}'
+        - role: assistant
           content: "What is the team key and display name?"
         - role: user
           content: "Team key st-nova, display name Nova."
