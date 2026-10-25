@@ -13,6 +13,9 @@ prompts:
         {%- for msg in conversation %},
         {{ msg | dump }}
         {%- endfor %}
+        {%- for msg in continuation %},
+        {{ msg | dump }}
+        {%- endfor %}
       ]
 
 defaultTest:
@@ -373,10 +376,13 @@ tests:
         value: |
           const content = Array.isArray(output) ? output : output?.content;
           const text = typeof output === 'string' ? output : (Array.isArray(content) ? content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof content === 'string' ? content : ''));
-          const lower = text.toLowerCase();
-          const hasOpenBaoReaderQuestion = lower.includes('openbao') && lower.includes('reader') &&
-            ['sandbox', 'non-production', 'production'].every(environment => lower.includes(environment));
-          return hasOpenBaoReaderQuestion && text.includes('?');
+          const questions = text.toLowerCase().match(/[^.!?\n]*\?/g) || [];
+          const readerQuestion = questions.some(question =>
+            question.includes('openbao') && question.includes('reader') &&
+            ['sandbox', 'non-production', 'production'].every(environment => question.includes(environment)));
+          const assumesMembership = /[\w.+-]+@[\w.-]+|\b(?:i will|i'll|we will|we'll)\s+(?:copy|reuse|assign|use)\b/i.test(text);
+          const asksAnotherRole = questions.some(question => /\b(?:writers?|admins?)\b/.test(question));
+          return readerQuestion && !assumesMembership && !asksAnotherRole;
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 3: ONBOARD — explicit "yes" after summary triggers PR creation
@@ -384,7 +390,11 @@ tests:
 
   - description: "Multi-turn onboard: explicit confirmation after summary — open_team_pr and open_team_docs_pr are called"
     vars:
-      conversation:
+      openbaoMembers:
+        readers: {sandbox: [], non-production: [], production: []}
+        writers: {sandbox: [], non-production: [], production: []}
+        admins: {sandbox: [], non-production: [], production: []}
+      conversation: &confirmed_onboarding
         - role: user
           content: I want to onboard a new team.
         - role: assistant
@@ -525,6 +535,22 @@ tests:
             - type: text
               text: "PR 1 is open. Please continue with PR 2 (st-nova onboarding) and PR 3 (docs) now."
     assert:
+      - &openbao_membership_assertion
+        type: javascript
+        value: |
+          const parsed = typeof output === 'string' ? JSON.parse(output) : output;
+          const calls = Array.isArray(parsed) ? parsed : (parsed?.tool_calls || parsed?.content || []);
+          const specs = calls.filter(call => (call.function?.name || call.name) === 'open_team_pr').map(call => {
+            const input = call.function?.arguments || call.input || call.arguments;
+            return (typeof input === 'string' ? JSON.parse(input) : input)?.spec;
+          });
+          const spec = specs.find(spec => spec?.team_key === 'st-nova');
+          return Boolean(spec) && Object.entries(context.vars.openbaoMembers).every(([role, expected]) =>
+            Object.entries(expected).every(([environment, members]) => {
+              const actual = spec.authentik_groups?.[`openbao-secret-${role}`]?.members?.[environment];
+              return Array.isArray(actual) && actual.length === members.length &&
+                members.every(member => actual.includes(member));
+            }));
       - type: javascript
         value: |
           const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
@@ -553,6 +579,33 @@ tests:
           const openIdx = ordered.indexOf('open_team_pr');
           if (searchIdx >= 0 && openIdx >= 0 && searchIdx < openIdx) return false;
           return true;
+
+  - description: "Multi-turn onboard: confirmed OpenBao correction preserves distinct and empty environment lists in the submitted spec"
+    vars:
+      conversation: *confirmed_onboarding
+      continuation:
+        - role: user
+          content: >-
+            Before submitting PR 2, change the OpenBao lists as follows, leaving Google membership unchanged:
+            readers: sandbox reader-sb@osinfra.io, non-production empty, production reader-prod@osinfra.io;
+            writers: sandbox empty, non-production writer-nonprod@osinfra.io, production empty;
+            admins: sandbox empty, non-production empty, production admin-prod@osinfra.io.
+            I confirm these exact environment-specific lists and authorize submitting the complete st-nova spec now.
+      openbaoMembers:
+        readers:
+          sandbox: [reader-sb@osinfra.io]
+          non-production: []
+          production: [reader-prod@osinfra.io]
+        writers:
+          sandbox: []
+          non-production: [writer-nonprod@osinfra.io]
+          production: []
+        admins:
+          sandbox: []
+          non-production: []
+          production: [admin-prod@osinfra.io]
+    assert:
+      - *openbao_membership_assertion
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 4: ADD MEMBER — explicit confirmation triggers open_team_pr
