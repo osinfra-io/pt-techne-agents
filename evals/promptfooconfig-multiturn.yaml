@@ -617,6 +617,20 @@ tests:
           return names.includes('open_team_pr');
       - type: javascript
         value: |
+          const parsed = typeof output === 'string'
+            ? output.split('\n').filter(line => /^\s*\{"type":"tool_use"/.test(line)).map(line => JSON.parse(line))
+            : output;
+          const calls = Array.isArray(parsed) ? parsed : (parsed?.tool_calls || parsed?.content || []);
+          const helpersCall = calls.find(call => (call.function?.name || call.name) === 'open_team_helpers_pr');
+          if (!helpersCall) {
+            console.error('Expected open_team_helpers_pr for OpenBao-only st-nova onboarding:', JSON.stringify(calls));
+            return false;
+          }
+          const input = helpersCall.function?.arguments || helpersCall.input || helpersCall.arguments;
+          const args = typeof input === 'string' ? JSON.parse(input) : input;
+          return args?.team_key === 'st-nova';
+      - type: javascript
+        value: |
           // Should not fabricate identities not present in the conversation
           const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
           const raw = typeof output === 'string' ? output : JSON.stringify(output);
