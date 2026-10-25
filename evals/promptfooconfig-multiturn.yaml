@@ -532,6 +532,43 @@ tests:
             - type: tool_result
               tool_use_id: toolu_11
               content: '{"action":"created","branch":"onboard/st-nova-environment","pr_url":"https://github.com/osinfra-io/pt-logos/pull/100"}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_onboard_matrix
+              name: get_file_contents
+              input:
+                owner: osinfra-io
+                repo: pt-logos
+                path: .github/workflows/production.yml
+                ref: main
+            - type: tool_use
+              id: toolu_onboard_schema
+              name: get_file_contents
+              input:
+                owner: osinfra-io
+                repo: pt-techne-mcp-server
+                path: schema/team.schema.json
+                ref: main
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_onboard_matrix
+              content: '{"type":"file","path":".github/workflows/production.yml","content":"jobs:\n  main:\n    strategy:\n      matrix:\n        teams: [pt-logos, pt-pneuma]\n"}'
+            - type: tool_result
+              tool_use_id: toolu_onboard_schema
+              content: >-
+                Relevant schema excerpt:
+                {"required":["team_key","team_type","display_name","display_name_comment","datadog_team_memberships","github_parent_team_memberships","google_basic_groups_env_memberships"],
+                "properties":{"team_key":{"type":"string"},"team_type":{"enum":["platform-team","stream-aligned-team","complicated-subsystem-team","enabling-team"]},
+                "display_name":{"type":"string"},"display_name_comment":{"type":"string"},
+                "datadog_team_memberships":{"type":"object","required":["admins","members"],"properties":{"admins":{"type":"array","items":{"type":"string"}},"members":{"type":"array","items":{"type":"string"}}}},
+                "github_parent_team_memberships":{"$ref":"#/$defs/githubMembership"},
+                "google_basic_groups_env_memberships":{"type":"object","required":["admin","reader","writer"],"properties":{"admin":{"$ref":"#/$defs/envScopedGoogleGroups"},"reader":{"$ref":"#/$defs/envScopedGoogleGroups"},"writer":{"$ref":"#/$defs/envScopedGoogleGroups"}}},
+                "authentik_groups":{"type":"object","additionalProperties":{"type":"object","required":["description","label"],"properties":{"description":{"type":"string"},"label":{"type":"string"},"members":{"type":"object","description":"Explicit member emails per environment. Omitted environments have no members.","properties":{"sandbox":{"type":"array","items":{"type":"string"}},"non-production":{"type":"array","items":{"type":"string"}},"production":{"type":"array","items":{"type":"string"}}}}}}}},
+                "$defs":{"githubMembership":{"type":"object","required":["maintainers","members"],"properties":{"maintainers":{"type":"array","items":{"type":"string"}},"members":{"type":"array","items":{"type":"string"}}}},
+                "envScopedGoogleGroups":{"type":"object","properties":{"sandbox":{"$ref":"#/$defs/googleGroup"},"non-production":{"$ref":"#/$defs/googleGroup"},"production":{"$ref":"#/$defs/googleGroup"}}},
+                "googleGroup":{"type":"object","required":["owners","managers","members"],"properties":{"owners":{"type":"array","items":{"type":"string"}},"managers":{"type":"array","items":{"type":"string"}},"members":{"type":"array","items":{"type":"string"}}}}}}
             - type: text
               text: "PR 1 is open. Please continue with PR 2 (st-nova onboarding) and PR 3 (docs) now."
     assert:
@@ -553,9 +590,11 @@ tests:
           }
           return Boolean(spec) && Object.entries(context.vars.openbaoMembers).every(([role, expected]) =>
             Object.entries(expected).every(([environment, members]) => {
-              const actual = spec.authentik_groups?.[`openbao-secret-${role}`]?.members?.[environment];
-              const matches = Array.isArray(actual) && actual.length === members.length &&
-                members.every(member => actual.includes(member));
+              const group = spec.authentik_groups?.[`openbao-secret-${role}`];
+              const actual = group?.members?.[environment];
+              const matches = Boolean(group) && (actual === undefined ? members.length === 0 :
+                Array.isArray(actual) && actual.length === members.length &&
+                members.every(member => actual.includes(member)));
               if (!matches) console.error('OpenBao membership mismatch:', JSON.stringify({role, environment, expected: members, actual}));
               return matches;
             }));
