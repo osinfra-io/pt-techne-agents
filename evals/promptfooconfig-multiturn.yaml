@@ -538,7 +538,9 @@ tests:
       - &openbao_membership_assertion
         type: javascript
         value: |
-          const parsed = typeof output === 'string' ? JSON.parse(output) : output;
+          const parsed = typeof output === 'string'
+            ? output.split('\n').filter(line => /^\s*\{"type":"tool_use"/.test(line)).map(line => JSON.parse(line))
+            : output;
           const calls = Array.isArray(parsed) ? parsed : (parsed?.tool_calls || parsed?.content || []);
           const specs = calls.filter(call => (call.function?.name || call.name) === 'open_team_pr').map(call => {
             const input = call.function?.arguments || call.input || call.arguments;
