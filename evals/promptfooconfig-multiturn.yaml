@@ -547,11 +547,17 @@ tests:
             return (typeof input === 'string' ? JSON.parse(input) : input)?.spec;
           });
           const spec = specs.find(spec => spec?.team_key === 'st-nova');
+          if (!spec) {
+            console.error('Expected the submitted st-nova spec; received tool calls:', JSON.stringify(calls));
+            return false;
+          }
           return Boolean(spec) && Object.entries(context.vars.openbaoMembers).every(([role, expected]) =>
             Object.entries(expected).every(([environment, members]) => {
               const actual = spec.authentik_groups?.[`openbao-secret-${role}`]?.members?.[environment];
-              return Array.isArray(actual) && actual.length === members.length &&
+              const matches = Array.isArray(actual) && actual.length === members.length &&
                 members.every(member => actual.includes(member));
+              if (!matches) console.error('OpenBao membership mismatch:', JSON.stringify({role, environment, expected: members, actual}));
+              return matches;
             }));
       - type: javascript
         value: |
