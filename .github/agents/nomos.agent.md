@@ -161,6 +161,7 @@ If the team needs projects beyond the standard ones Corpus creates, set `enable_
 
 Before creating any files, show a formatted summary of everything collected and ask for confirmation.
 For Authentik groups, show each OpenBao access role and its exact environment-specific member lists separately from Google Cloud Identity groups.
+In that confirmation summary, list and count every PR the onboarding will open. Include both Helpers PRs whenever GKE, additional Google Cloud Platform projects, or any OpenBao group is configured; do not describe the plan as only three PRs when Helpers PRs also apply.
 
 **New team onboarding opens two PRs in sequence on `pt-logos`, plus additional PRs on other repos.**
 
@@ -175,12 +176,14 @@ For Authentik groups, show each OpenBao access role and its exact environment-sp
 
 **If GKE clusters are configured** (any team type): after `open_team_docs_pr` returns, push the `docs/platform-grouping/corpus/networking.md` update to the same branch using `push_files` — follow the Active Clusters / Available Slots / tab-count edits described in **Operation 10** for each new cluster location.
 
-**Helpers PR** (`osinfra-io/pt-corpus` and `osinfra-io/pt-pneuma`): — open only if **GKE clusters are configured OR additional Google Cloud Platform projects are being created**:
-Call `pt-techne-mcp-server/open_team_helpers_pr` with the team key, `branch: "onboard/{team-key}-helpers"`, `message: "Update pt-corpus and pt-pneuma: add {team-key} logos workspace"`, and `labels: ["nomos"]` — it inserts `"{team-key}-main-production"` into `logos_workspaces` in both repos and opens one PR per repo in a single call. Note the returned `corpus.action` and `pneuma.action` values.
+**Helpers PRs** (`osinfra-io/pt-corpus` and `osinfra-io/pt-pneuma`): — open if **GKE clusters are configured OR additional Google Cloud Platform projects are being created OR the complete team spec declares any OpenBao group** (`openbao-secret-readers`, `openbao-secret-writers`, or `openbao-secret-admins`). For the OpenBao condition, inspect the keys under `spec.authentik_groups`; the presence of any listed group key triggers both PRs regardless of whether its `members` field is missing, empty, or contains only empty environment lists. Do not decide based on membership count:
+Call `pt-techne-mcp-server/open_team_helpers_pr` exactly once with the team key, `branch: "onboard/{team-key}-helpers"`, `message: "Update pt-corpus and pt-pneuma: add {team-key} logos workspace"`, and `labels: ["nomos"]` — it inserts `"{team-key}-main-production"` into `logos_workspaces` in both repos and opens one PR per repo in a single call. Note the returned `corpus.action` and `pneuma.action` values.
 
-Open PR 1 first, then immediately open PR 2, PR 3 (docs), and the Helpers PR (if applicable) in parallel. Make clear to the user that **PR 1 must be reviewed and merged before PR 2** — the GitHub environment it creates gates the production deployment that fires when PR 2 merges. Other PRs are independent and can be merged in any order, but the Helpers PR should be merged after the logos deployment completes (after PR 2 merges and the workflow finishes).
+**Mandatory OpenBao gate:** Before opening PR 2 and the docs PR, inspect the complete team spec. If `spec.authentik_groups` contains any of the three OpenBao keys above, include exactly one `open_team_helpers_pr` call in that same tool-call batch; that call opens separate PRs in both pt-corpus and pt-pneuma. This applies even when the user asks only to continue with PR 2 and PR 3; do not stop after those two calls.
 
-**After all PRs are open**, summarise the merge order: PR 1 first (creates the GitHub environment gating production), then PR 2 (triggers the team deployment); the docs PR can merge any time; the Helpers PR (if open) merges after the logos deployment finishes so both repos can register the workspace before provisioning their resources.
+Open PR 1 first, then immediately open PR 2, PR 3 (docs), and both Helpers PRs (if applicable) in parallel using one `open_team_helpers_pr` call. Make clear to the user that **PR 1 must be reviewed and merged before PR 2** — the GitHub environment it creates gates the production deployment that fires when PR 2 merges. Other PRs are independent and can be merged in any order, but both Helpers PRs must be merged after the Logos production deployment completes (after PR 2 merges and the workflow finishes).
+
+**After all PRs are open**, summarise the merge order: PR 1 first (creates the GitHub environment gating production), then PR 2 (triggers the team deployment); the docs PR can merge any time; both Helpers PRs (if open) merge after the Logos deployment finishes so both repos can register the workspace before provisioning their resources.
 
 ---
 
