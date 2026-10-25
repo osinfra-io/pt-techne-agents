@@ -320,7 +320,22 @@ tests:
         - role: user
           content: "Team key st-nova, display name Nova."
         - role: assistant
-          content: "What is the team description?"
+          content:
+            - type: tool_use
+              id: toolu_openbao_team_key
+              name: get_file_contents
+              input:
+                owner: osinfra-io
+                repo: pt-logos
+                path: .github/workflows/production.yml
+                ref: main
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_openbao_team_key
+              content: '{"type":"file","path":".github/workflows/production.yml","content":"jobs:\n  main:\n    strategy:\n      matrix:\n        teams: [pt-logos, pt-pneuma]\n"}'
+        - role: assistant
+          content: "The key st-nova is available. Nova is a stream-aligned team. What is the team description?"
         - role: user
           content: "Nova team for stream-aligned delivery workloads."
         - role: assistant
@@ -332,9 +347,21 @@ tests:
         - role: user
           content: "alice-dev"
         - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_openbao_maintainer
+              name: search_users
+              input:
+                query: alice-dev
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_openbao_maintainer
+              content: '{"total_count":1,"items":[{"login":"alice-dev","type":"User"}]}'
+        - role: assistant
           content: "Should the Google Cloud Identity group membership be the same in all environments?"
         - role: user
-          content: "Yes, alice@osinfra.io for all Google roles in sandbox, non-production, and production."
+          content: "Yes, alice@osinfra.io as owner for all Google roles in sandbox, non-production, and production."
     assert:
       - type: javascript
         value: |
