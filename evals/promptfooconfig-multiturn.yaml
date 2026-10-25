@@ -491,9 +491,10 @@ tests:
             | OpenBao Secret Writers | None in all environments |
             | OpenBao Secret Admins | None in all environments |
 
-            This will open four pull requests: **PR 1** adds the GitHub environment to pt-logos,
-            **PR 2** onboards the team, **PR 3** creates the docs page, and **PR 4** registers
-            the team's workspace in the Corpus and Pneuma Helpers because OpenBao groups are declared.
+            This will open five pull requests: **PR 1** adds the GitHub environment to pt-logos,
+            **PR 2** onboards the team, **PR 3** creates the docs page, **PR 4** registers the
+            team's workspace in pt-corpus, and **PR 5** registers it in pt-pneuma because OpenBao
+            groups are declared.
 
             Shall I go ahead?
         - role: user
