@@ -91,6 +91,8 @@ Collect the membership environment by environment, or ask if the membership is t
 
 **Common pattern for new teams:** the same person is admin/reader/writer owner in all three environments. Offer this as the default ("same membership in all environments?") and expand only if they want to differentiate.
 
+**OpenBao team secrets access.** Declare three Authentik groups for every team: `openbao-secret-readers` (`OpenBao Secret Readers`) can read and list secrets; `openbao-secret-writers` (`OpenBao Secret Writers`) can read, list, create, and update secrets without deleting them; `openbao-secret-admins` (`OpenBao Secret Admins`) can manage secrets and versions only within that team's prefix, with no OpenBao system administration. For each group, collect separate member lists for sandbox, non-production, and production; an empty list is valid. Ask about one access group at a time. These memberships are independent of Google Cloud IAM: never copy Google group members or one environment's members unless the user explicitly confirms the same membership.
+
 #### Phase 2 — Optional enhancements
 
 Once required fields are collected, tell the user what's required is done and offer the optional sections as a menu — anything they skip can be added later: GitHub Actions + GCP OIDC (`enable_workflows` and optionally `enable_opentofu_state_management`), GitHub repositories, GKE clusters, Cloud SQL, additional GCP projects. Ask if they'd like to configure any now or proceed to the summary.
@@ -158,6 +160,7 @@ If the team needs projects beyond the standard ones Corpus creates, set `enable_
 #### Summary and PRs
 
 Before creating any files, show a formatted summary of everything collected and ask for confirmation.
+For Authentik groups, show each OpenBao access role and its exact environment-specific member lists separately from Google Cloud Identity groups.
 
 **New team onboarding opens two PRs in sequence on `pt-logos`, plus additional PRs on other repos.**
 

@@ -13,6 +13,9 @@ prompts:
         {%- for msg in conversation %},
         {{ msg | dump }}
         {%- endfor %}
+        {%- for msg in continuation %},
+        {{ msg | dump }}
+        {%- endfor %}
       ]
 
 defaultTest:
@@ -223,11 +226,26 @@ tests:
         - role: user
           content: Same in all environments — alice@osinfra.io as owner for all groups.
         - role: assistant
+          content: "Who should have OpenBao Secret Reader access in sandbox, non-production, and production? This is separate from Google IAM; I won't reuse those memberships unless you explicitly confirm the same members."
+        - role: user
+          content: No readers for now.
+        - role: assistant
+          content: "Who should have OpenBao Secret Writer access in sandbox, non-production, and production? Empty membership is allowed."
+        - role: user
+          content: No writers for now.
+        - role: assistant
+          content: "Who should have OpenBao Secret Admin access in sandbox, non-production, and production? Admin access is limited to this team's secrets."
+        - role: user
+          content: No admins for now.
+        - role: assistant
           content: >-
             ✅ Required fields are all set for **st-nova**:
             - Datadog admin: alice@osinfra.io
             - GitHub maintainer: alice-dev
             - Google groups owners (admin/reader/writer, all environments): alice@osinfra.io
+            - OpenBao Secret Readers: none in all environments
+            - OpenBao Secret Writers: none in all environments
+            - OpenBao Secret Admins: none in all environments
 
             Would you like to configure any optional enhancements — GitHub Actions/OIDC, repositories,
             GKE clusters, Cloud SQL, or additional GCP projects — or proceed straight to the summary?
@@ -258,13 +276,133 @@ tests:
           const hasShorthand = (lower.includes('all groups') || lower.includes('all nine') || lower.includes('google groups') || lower.includes('google cloud identity')) && lower.includes('owner');
           return (hasRoles && (hasEnvs || hasAllEnvs)) || hasShorthand;
 
+  - description: "Multi-turn onboard: asks for OpenBao access separately per environment"
+    vars:
+      conversation:
+        - role: user
+          content: "Onboard a new team."
+        - role: assistant
+          content:
+            - type: text
+              text: "Hi! I'm the Nomos Agent. Give me a moment while I look you up."
+            - type: tool_use
+              id: toolu_openbao_identity
+              name: get_me
+              input: {}
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_openbao_identity
+              content: '{"login":"alice-dev","email":"alice@osinfra.io"}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_openbao_github
+              name: lookup_user
+              input:
+                github_username: alice-dev
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_openbao_github
+              content: '{"matches":[]}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_openbao_email
+              name: lookup_user
+              input:
+                email: alice@osinfra.io
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_openbao_email
+              content: '{"matches":[]}'
+        - role: assistant
+          content: "What is the team key and display name?"
+        - role: user
+          content: "Team key st-nova, display name Nova."
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_openbao_team_key
+              name: get_file_contents
+              input:
+                owner: osinfra-io
+                repo: pt-logos
+                path: .github/workflows/production.yml
+                ref: main
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_openbao_team_key
+              content: '{"type":"file","path":".github/workflows/production.yml","content":"jobs:\n  main:\n    strategy:\n      matrix:\n        teams: [pt-logos, pt-pneuma]\n"}'
+        - role: assistant
+          content: "The key st-nova is available. Nova is a stream-aligned team. What is the team description?"
+        - role: user
+          content: "Nova team for stream-aligned delivery workloads."
+        - role: assistant
+          content: "Who should be the Datadog admin?"
+        - role: user
+          content: "alice@osinfra.io"
+        - role: assistant
+          content: "Who should maintain the GitHub parent team?"
+        - role: user
+          content: "alice-dev"
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_openbao_maintainer
+              name: search_users
+              input:
+                query: alice-dev
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_openbao_maintainer
+              content: '{"total_count":1,"items":[{"login":"alice-dev","type":"User"}]}'
+        - role: assistant
+          content: "Should the Google Cloud Identity group membership be the same in all environments?"
+        - role: user
+          content: "Yes, alice@osinfra.io as owner for all Google roles in sandbox, non-production, and production."
+    assert:
+      - type: javascript
+        value: |
+          const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
+          const raw = typeof output === 'string' ? output : JSON.stringify(output);
+          const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
+          return !names.includes('open_team_pr');
+      - type: llm-rubric
+        provider:
+          id: anthropic:messages:claude-sonnet-4-6
+          config:
+            temperature: 0
+        value: >-
+          The user confirmed alice@osinfra.io as owner of all Google IAM roles in
+          sandbox, non-production, and production. They have not provided or
+          confirmed ANY OpenBao membership. The response must actually ask who
+          should be OpenBao Secret Readers, requesting membership separately for
+          sandbox, non-production, and production. Empty lists must be permitted.
+          It must not assign or announce copying Google members or one
+          environment's members into another without explicit confirmation.
+          Asking whether the user wants the same membership is allowed; assuming
+          that answer is not. Explaining writer/admin permissions is allowed,
+          but asking for writer/admin membership instead of reader membership,
+          or collecting multiple access groups in this turn, fails.
+          A statement mentioning readers followed only by a writer question
+          fails, even if all three environments are named elsewhere.
+
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 3: ONBOARD — explicit "yes" after summary triggers PR creation
   # ═══════════════════════════════════════════════════════════════════════════
 
   - description: "Multi-turn onboard: explicit confirmation after summary — open_team_pr and open_team_docs_pr are called"
     vars:
-      conversation:
+      openbaoMembers:
+        readers: {sandbox: [], non-production: [], production: []}
+        writers: {sandbox: [], non-production: [], production: []}
+        admins: {sandbox: [], non-production: [], production: []}
+      conversation: &confirmed_onboarding
         - role: user
           content: I want to onboard a new team.
         - role: assistant
@@ -321,6 +459,18 @@ tests:
         - role: user
           content: Yes — alice@osinfra.io as owner for all groups in all environments.
         - role: assistant
+          content: "Who should have OpenBao Secret Reader access in sandbox, non-production, and production? This is separate from Google IAM; I won't reuse those memberships unless you explicitly confirm the same members."
+        - role: user
+          content: No readers for now.
+        - role: assistant
+          content: "Who should have OpenBao Secret Writer access in sandbox, non-production, and production? Empty membership is allowed."
+        - role: user
+          content: No writers for now.
+        - role: assistant
+          content: "Who should have OpenBao Secret Admin access in sandbox, non-production, and production? Admin access is limited to this team's secrets."
+        - role: user
+          content: No admins for now.
+        - role: assistant
           content: No optional enhancements — proceeding to summary.
         - role: user
           content: Yes, skip optional enhancements.
@@ -337,6 +487,9 @@ tests:
             | Datadog admin | alice@osinfra.io |
             | GitHub maintainer | alice-dev |
             | Google groups owners | alice@osinfra.io (admin/reader/writer, all environments) |
+            | OpenBao Secret Readers | None in all environments |
+            | OpenBao Secret Writers | None in all environments |
+            | OpenBao Secret Admins | None in all environments |
 
             This will open three pull requests: **PR 1** adds the GitHub environment to pt-logos,
             **PR 2** onboards the team, and **PR 3** creates the docs page.
@@ -387,9 +540,72 @@ tests:
             - type: tool_result
               tool_use_id: toolu_11
               content: '{"action":"created","branch":"onboard/st-nova-environment","pr_url":"https://github.com/osinfra-io/pt-logos/pull/100"}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_onboard_matrix
+              name: get_file_contents
+              input:
+                owner: osinfra-io
+                repo: pt-logos
+                path: .github/workflows/production.yml
+                ref: main
+            - type: tool_use
+              id: toolu_onboard_schema
+              name: get_file_contents
+              input:
+                owner: osinfra-io
+                repo: pt-techne-mcp-server
+                path: schema/team.schema.json
+                ref: main
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_onboard_matrix
+              content: '{"type":"file","path":".github/workflows/production.yml","content":"jobs:\n  main:\n    strategy:\n      matrix:\n        teams: [pt-logos, pt-pneuma]\n"}'
+            - type: tool_result
+              tool_use_id: toolu_onboard_schema
+              content: >-
+                Relevant schema excerpt:
+                {"required":["team_key","team_type","display_name","display_name_comment","datadog_team_memberships","github_parent_team_memberships","google_basic_groups_env_memberships"],
+                "properties":{"team_key":{"type":"string"},"team_type":{"enum":["platform-team","stream-aligned-team","complicated-subsystem-team","enabling-team"]},
+                "display_name":{"type":"string"},"display_name_comment":{"type":"string"},
+                "datadog_team_memberships":{"type":"object","required":["admins","members"],"properties":{"admins":{"type":"array","items":{"type":"string"}},"members":{"type":"array","items":{"type":"string"}}}},
+                "github_parent_team_memberships":{"$ref":"#/$defs/githubMembership"},
+                "google_basic_groups_env_memberships":{"type":"object","required":["admin","reader","writer"],"properties":{"admin":{"$ref":"#/$defs/envScopedGoogleGroups"},"reader":{"$ref":"#/$defs/envScopedGoogleGroups"},"writer":{"$ref":"#/$defs/envScopedGoogleGroups"}}},
+                "authentik_groups":{"type":"object","additionalProperties":{"type":"object","required":["description","label"],"properties":{"description":{"type":"string"},"label":{"type":"string"},"members":{"type":"object","description":"Explicit member emails per environment. Omitted environments have no members.","properties":{"sandbox":{"type":"array","items":{"type":"string"}},"non-production":{"type":"array","items":{"type":"string"}},"production":{"type":"array","items":{"type":"string"}}}}}}}},
+                "$defs":{"githubMembership":{"type":"object","required":["maintainers","members"],"properties":{"maintainers":{"type":"array","items":{"type":"string"}},"members":{"type":"array","items":{"type":"string"}}}},
+                "envScopedGoogleGroups":{"type":"object","properties":{"sandbox":{"$ref":"#/$defs/googleGroup"},"non-production":{"$ref":"#/$defs/googleGroup"},"production":{"$ref":"#/$defs/googleGroup"}}},
+                "googleGroup":{"type":"object","required":["owners","managers","members"],"properties":{"owners":{"type":"array","items":{"type":"string"}},"managers":{"type":"array","items":{"type":"string"}},"members":{"type":"array","items":{"type":"string"}}}}}}
             - type: text
               text: "PR 1 is open. Please continue with PR 2 (st-nova onboarding) and PR 3 (docs) now."
     assert:
+      - &openbao_membership_assertion
+        type: javascript
+        value: |
+          const parsed = typeof output === 'string'
+            ? output.split('\n').filter(line => /^\s*\{"type":"tool_use"/.test(line)).map(line => JSON.parse(line))
+            : output;
+          const calls = Array.isArray(parsed) ? parsed : (parsed?.tool_calls || parsed?.content || []);
+          const specs = calls.filter(call => (call.function?.name || call.name) === 'open_team_pr').map(call => {
+            const input = call.function?.arguments || call.input || call.arguments;
+            return (typeof input === 'string' ? JSON.parse(input) : input)?.spec;
+          });
+          const spec = specs.find(spec => spec?.team_key === 'st-nova');
+          if (!spec) {
+            console.error('Expected the submitted st-nova spec; received tool calls:', JSON.stringify(calls));
+            return false;
+          }
+          return Boolean(spec) && Object.entries(context.vars.openbaoMembers).every(([role, expected]) =>
+            Object.entries(expected).every(([environment, members]) => {
+              const group = spec.authentik_groups?.[`openbao-secret-${role}`];
+              const actual = group?.members?.[environment];
+              const matches = Boolean(group) && (actual === undefined ? members.length === 0 :
+                Array.isArray(actual) && actual.length === members.length &&
+                members.every(member => actual.includes(member)));
+              if (!matches) console.error('OpenBao membership mismatch:', JSON.stringify({role, environment, expected: members, actual}));
+              return matches;
+            }));
       - type: javascript
         value: |
           const calls = Array.isArray(output) ? output : (output?.tool_calls || output?.content?.filter?.(c => c.type === 'tool_use') || []);
@@ -418,6 +634,33 @@ tests:
           const openIdx = ordered.indexOf('open_team_pr');
           if (searchIdx >= 0 && openIdx >= 0 && searchIdx < openIdx) return false;
           return true;
+
+  - description: "Multi-turn onboard: confirmed OpenBao correction preserves distinct and empty environment lists in the submitted spec"
+    vars:
+      conversation: *confirmed_onboarding
+      continuation:
+        - role: user
+          content: >-
+            Before submitting PR 2, change the OpenBao lists as follows, leaving Google membership unchanged:
+            readers: sandbox reader-sb@osinfra.io, non-production empty, production reader-prod@osinfra.io;
+            writers: sandbox empty, non-production writer-nonprod@osinfra.io, production empty;
+            admins: sandbox empty, non-production empty, production admin-prod@osinfra.io.
+            I confirm these exact environment-specific lists and authorize submitting the complete st-nova spec now.
+      openbaoMembers:
+        readers:
+          sandbox: [reader-sb@osinfra.io]
+          non-production: []
+          production: [reader-prod@osinfra.io]
+        writers:
+          sandbox: []
+          non-production: [writer-nonprod@osinfra.io]
+          production: []
+        admins:
+          sandbox: []
+          non-production: []
+          production: [admin-prod@osinfra.io]
+    assert:
+      - *openbao_membership_assertion
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 4: ADD MEMBER — explicit confirmation triggers open_team_pr
