@@ -491,8 +491,9 @@ tests:
             | OpenBao Secret Writers | None in all environments |
             | OpenBao Secret Admins | None in all environments |
 
-            This will open three pull requests: **PR 1** adds the GitHub environment to pt-logos,
-            **PR 2** onboards the team, and **PR 3** creates the docs page.
+            This will open four pull requests: **PR 1** adds the GitHub environment to pt-logos,
+            **PR 2** onboards the team, **PR 3** creates the docs page, and **PR 4** registers
+            the team's workspace in the Corpus and Pneuma Helpers because OpenBao groups are declared.
 
             Shall I go ahead?
         - role: user
@@ -578,7 +579,7 @@ tests:
                 "envScopedGoogleGroups":{"type":"object","properties":{"sandbox":{"$ref":"#/$defs/googleGroup"},"non-production":{"$ref":"#/$defs/googleGroup"},"production":{"$ref":"#/$defs/googleGroup"}}},
                 "googleGroup":{"type":"object","required":["owners","managers","members"],"properties":{"owners":{"type":"array","items":{"type":"string"}},"managers":{"type":"array","items":{"type":"string"}},"members":{"type":"array","items":{"type":"string"}}}}}}
             - type: text
-              text: "PR 1 is open. Please continue with PR 2 (st-nova onboarding) and PR 3 (docs) now."
+              text: "PR 1 is open. Please continue with the remaining approved onboarding PRs now."
     assert:
       - &openbao_membership_assertion
         type: javascript

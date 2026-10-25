@@ -161,6 +161,7 @@ If the team needs projects beyond the standard ones Corpus creates, set `enable_
 
 Before creating any files, show a formatted summary of everything collected and ask for confirmation.
 For Authentik groups, show each OpenBao access role and its exact environment-specific member lists separately from Google Cloud Identity groups.
+In that confirmation summary, list and count every PR the onboarding will open. Include the Helpers PR whenever GKE, additional Google Cloud Platform projects, or any OpenBao group is configured; do not describe the plan as only three PRs when a Helpers PR also applies.
 
 **New team onboarding opens two PRs in sequence on `pt-logos`, plus additional PRs on other repos.**
 
