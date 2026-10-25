@@ -372,17 +372,25 @@ tests:
           const raw = typeof output === 'string' ? output : JSON.stringify(output);
           const names = [...new Set([...calls.map(c => c.function?.name || c.name).filter(Boolean), ...[...raw.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1])])];
           return !names.includes('open_team_pr');
-      - type: javascript
-        value: |
-          const content = Array.isArray(output) ? output : output?.content;
-          const text = typeof output === 'string' ? output : (Array.isArray(content) ? content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (typeof content === 'string' ? content : ''));
-          const questions = text.toLowerCase().match(/[^.!?\n]*\?/g) || [];
-          const readerQuestion = questions.some(question =>
-            question.includes('openbao') && question.includes('reader') &&
-            ['sandbox', 'non-production', 'production'].every(environment => question.includes(environment)));
-          const assumesMembership = /[\w.+-]+@[\w.-]+|\b(?:i will|i'll|we will|we'll)\s+(?:copy|reuse|assign|use)\b/i.test(text);
-          const asksAnotherRole = questions.some(question => /\b(?:writers?|admins?)\b/.test(question));
-          return readerQuestion && !assumesMembership && !asksAnotherRole;
+      - type: llm-rubric
+        provider:
+          id: anthropic:messages:claude-sonnet-4-6
+          config:
+            temperature: 0
+        value: >-
+          The user confirmed alice@osinfra.io as owner of all Google IAM roles in
+          sandbox, non-production, and production. They have not provided or
+          confirmed ANY OpenBao membership. The response must actually ask who
+          should be OpenBao Secret Readers, requesting membership separately for
+          sandbox, non-production, and production. Empty lists must be permitted.
+          It must not assign or announce copying Google members or one
+          environment's members into another without explicit confirmation.
+          Asking whether the user wants the same membership is allowed; assuming
+          that answer is not. Explaining writer/admin permissions is allowed,
+          but asking for writer/admin membership instead of reader membership,
+          or collecting multiple access groups in this turn, fails.
+          A statement mentioning readers followed only by a writer question
+          fails, even if all three environments are named elsewhere.
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 3: ONBOARD — explicit "yes" after summary triggers PR creation
