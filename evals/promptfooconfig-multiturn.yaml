@@ -76,7 +76,8 @@ tests:
           content:
             - type: tool_result
               tool_use_id: toolu_team
-              content: '{"spec":{"team_key":"pt-pneuma","display_name":"Pneuma","authentik_groups":{"agentgateway-admins":{"label":"agentgateway Admins","description":"agentgateway UI access","members":{"sandbox":["alice@osinfra.io"]}}}}}'
+              content: |
+                {"spec":{"team_key":"pt-pneuma","team_type":"platform-team","display_name":"Pneuma","display_name_comment":"Pneuma platform team","authentik_groups":{"openbao-secret-admins":{"description":"Manage OpenBao secrets","label":"OpenBao Secret Admins","members":{"sandbox":["alice@osinfra.io"],"non-production":["alice@osinfra.io"],"production":["alice@osinfra.io"]}},"openbao-secret-readers":{"description":"Read OpenBao secrets","label":"OpenBao Secret Readers"},"openbao-secret-writers":{"description":"Write OpenBao secrets","label":"OpenBao Secret Writers"},"agentgateway-admins":{"description":"agentgateway UI access","label":"agentgateway Admins","members":{"sandbox":["alice@osinfra.io"]}},"authentik-admins":{"description":"Authentik instance administration","label":"Authentik Admins","members":{"sandbox":["brett@osinfra.io"],"non-production":["brett@osinfra.io"],"production":["brett@osinfra.io"]}}},"datadog_team_memberships":{"admins":["alice@osinfra.io"],"members":[]},"github_parent_team_memberships":{"maintainers":["alice-dev"],"members":[]},"github_child_teams_memberships":{"sandbox-approvers":{"maintainers":["alice-dev"],"members":[]},"non-production-approvers":{"maintainers":["alice-dev"],"members":[]},"production-approvers":{"maintainers":["alice-dev"],"members":[]},"repository-administrators":{"maintainers":["alice-dev"],"members":[]}},"google_basic_groups_env_memberships":{"admin":{"sandbox":{"owners":["alice@osinfra.io"],"managers":[],"members":[]},"non-production":{"owners":["alice@osinfra.io"],"managers":[],"members":[]},"production":{"owners":["alice@osinfra.io"],"managers":[],"members":[]}},"reader":{"sandbox":{"owners":["alice@osinfra.io"],"managers":[],"members":[]},"non-production":{"owners":["alice@osinfra.io"],"managers":[],"members":[]},"production":{"owners":["alice@osinfra.io"],"managers":[],"members":[]}},"writer":{"sandbox":{"owners":["alice@osinfra.io"],"managers":[],"members":[]},"non-production":{"owners":["alice@osinfra.io"],"managers":[],"members":[]},"production":{"owners":["alice@osinfra.io"],"managers":[],"members":[]}}}}}
     assert:
       - type: javascript
         value: |
@@ -216,15 +217,19 @@ tests:
         - role: assistant
           content: Got it. What email address(es) should be Datadog admins for st-nova? (@osinfra.io addresses)
         - role: user
-          content: alice@osinfra.io
+          content: "Admin alice@osinfra.io; no ordinary Datadog members."
         - role: assistant
           content: Got it — alice@osinfra.io as Datadog admin. Who should be the GitHub parent team maintainers? (GitHub usernames)
         - role: user
-          content: alice-dev
+          content: "alice-dev. No ordinary parent members."
+        - role: assistant
+          content: "Who should maintain each of the four standard child teams? Parent membership does not flow into child teams."
+        - role: user
+          content: "Use alice-dev for sandbox-approvers, non-production-approvers, production-approvers, and repository-administrators. No ordinary child-team members."
         - role: assistant
           content: "Got it. For the Google Cloud Identity groups, there are nine groups (admin, reader, and writer × sandbox, non-production, production). Should the membership be the same in all environments, or would you like to configure each environment separately?"
         - role: user
-          content: Same in all environments — alice@osinfra.io as owner for all groups.
+          content: Same in all environments — alice@osinfra.io as owner for all groups, with no managers or ordinary members.
         - role: assistant
           content: "Who should have OpenBao Secret Reader access in sandbox, non-production, and production? This is separate from Google IAM; I won't reuse those memberships unless you explicitly confirm the same members."
         - role: user
@@ -234,18 +239,19 @@ tests:
         - role: user
           content: No writers for now.
         - role: assistant
-          content: "Who should have OpenBao Secret Admin access in sandbox, non-production, and production? Admin access is limited to this team's secrets."
+          content: "Who should have OpenBao Secret Admin access in sandbox, non-production, and production? At least one admin is required in each environment; access is limited to this team's secrets."
         - role: user
-          content: No admins for now.
+          content: "alice@osinfra.io in sandbox, non-production, and production. I confirm the same OpenBao administrator in all three environments."
         - role: assistant
           content: >-
             ✅ Required fields are all set for **st-nova**:
             - Datadog admin: alice@osinfra.io
-            - GitHub maintainer: alice-dev
+            - Datadog ordinary members: none
+            - GitHub parent and all four standard child-team maintainers: alice-dev; no ordinary members
             - Google groups owners (admin/reader/writer, all environments): alice@osinfra.io
             - OpenBao Secret Readers: none in all environments
             - OpenBao Secret Writers: none in all environments
-            - OpenBao Secret Admins: none in all environments
+            - OpenBao Secret Admins: alice@osinfra.io in all environments
 
             Would you like to configure any optional enhancements — GitHub Actions/OIDC, repositories,
             GKE clusters, Cloud SQL, or additional GCP projects — or proceed straight to the summary?
@@ -344,11 +350,11 @@ tests:
         - role: assistant
           content: "Who should be the Datadog admin?"
         - role: user
-          content: "alice@osinfra.io"
+          content: "alice@osinfra.io; no ordinary Datadog members."
         - role: assistant
           content: "Who should maintain the GitHub parent team?"
         - role: user
-          content: "alice-dev"
+          content: "alice-dev; no ordinary parent members."
         - role: assistant
           content:
             - type: tool_use
@@ -361,6 +367,10 @@ tests:
             - type: tool_result
               tool_use_id: toolu_openbao_maintainer
               content: '{"total_count":1,"items":[{"login":"alice-dev","type":"User"}]}'
+        - role: assistant
+          content: "Who should maintain each of the four standard child teams?"
+        - role: user
+          content: "Use alice-dev for sandbox-approvers, non-production-approvers, production-approvers, and repository-administrators. No ordinary child-team members."
         - role: assistant
           content: "Should the Google Cloud Identity group membership be the same in all environments?"
         - role: user
@@ -401,7 +411,7 @@ tests:
       openbaoMembers:
         readers: {sandbox: [], non-production: [], production: []}
         writers: {sandbox: [], non-production: [], production: []}
-        admins: {sandbox: [], non-production: [], production: []}
+        admins: {sandbox: [alice@osinfra.io], non-production: [alice@osinfra.io], production: [alice@osinfra.io]}
       conversation: &confirmed_onboarding
         - role: user
           content: I want to onboard a new team.
@@ -449,15 +459,19 @@ tests:
         - role: assistant
           content: Got it — **st-nova** ("Nova"), stream-aligned team. What email address(es) should be Datadog admins?
         - role: user
-          content: alice@osinfra.io
+          content: "Admin alice@osinfra.io; no ordinary Datadog members."
         - role: assistant
           content: Got it. Who should be the GitHub parent team maintainers?
         - role: user
           content: alice-dev
         - role: assistant
+          content: "Who should maintain sandbox-approvers, non-production-approvers, production-approvers, and repository-administrators? Parent-team membership does not flow into these child teams."
+        - role: user
+          content: "Use alice-dev as maintainer of all four child teams, with no ordinary members. No ordinary parent-team members either."
+        - role: assistant
           content: "Got it. For the nine Google Cloud Identity groups (admin, reader, writer × sandbox, non-production, production) — should the membership be the same in all environments?"
         - role: user
-          content: Yes — alice@osinfra.io as owner for all groups in all environments.
+          content: Yes — alice@osinfra.io as owner for all groups in all environments, with no managers or ordinary members.
         - role: assistant
           content: "Who should have OpenBao Secret Reader access in sandbox, non-production, and production? This is separate from Google IAM; I won't reuse those memberships unless you explicitly confirm the same members."
         - role: user
@@ -467,9 +481,9 @@ tests:
         - role: user
           content: No writers for now.
         - role: assistant
-          content: "Who should have OpenBao Secret Admin access in sandbox, non-production, and production? Admin access is limited to this team's secrets."
+          content: "Who should have OpenBao Secret Admin access in sandbox, non-production, and production? Each environment requires at least one admin. Admin access is limited to this team's secrets."
         - role: user
-          content: No admins for now.
+          content: "Use alice@osinfra.io as OpenBao Secret Admin in all three environments. I explicitly confirm the same membership in sandbox, non-production, and production."
         - role: assistant
           content: No optional enhancements — proceeding to summary.
         - role: user
@@ -485,11 +499,13 @@ tests:
             | Display name | Nova |
             | Description | Nova team for stream-aligned delivery workloads |
             | Datadog admin | alice@osinfra.io |
-            | GitHub maintainer | alice-dev |
-            | Google groups owners | alice@osinfra.io (admin/reader/writer, all environments) |
+            | Datadog members | None |
+            | GitHub parent maintainer | alice-dev; no ordinary members |
+            | GitHub child maintainers | alice-dev for all four standard child teams; no ordinary members |
+            | Google groups owners | alice@osinfra.io (admin/reader/writer, all environments); no managers or ordinary members |
             | OpenBao Secret Readers | None in all environments |
             | OpenBao Secret Writers | None in all environments |
-            | OpenBao Secret Admins | None in all environments |
+            | OpenBao Secret Admins | alice@osinfra.io in all environments |
 
             This will open five pull requests: **PR 1** adds the GitHub environment to pt-logos,
             **PR 2** onboards the team, **PR 3** creates the docs page, **PR 4** registers the
@@ -569,16 +585,19 @@ tests:
               tool_use_id: toolu_onboard_schema
               content: >-
                 Relevant schema excerpt:
-                {"required":["team_key","team_type","display_name","display_name_comment","datadog_team_memberships","github_parent_team_memberships","google_basic_groups_env_memberships"],
+                {"required":["team_key","team_type","display_name","display_name_comment","datadog_team_memberships","github_parent_team_memberships","github_child_teams_memberships","google_basic_groups_env_memberships","authentik_groups"],
                 "properties":{"team_key":{"type":"string"},"team_type":{"enum":["platform-team","stream-aligned-team","complicated-subsystem-team","enabling-team"]},
                 "display_name":{"type":"string"},"display_name_comment":{"type":"string"},
-                "datadog_team_memberships":{"type":"object","required":["admins","members"],"properties":{"admins":{"type":"array","items":{"type":"string"}},"members":{"type":"array","items":{"type":"string"}}}},
+                "datadog_team_memberships":{"type":"object","required":["admins","members"],"properties":{"admins":{"type":"array","minItems":1,"items":{"type":"string"}},"members":{"type":"array","items":{"type":"string"}}}},
                 "github_parent_team_memberships":{"$ref":"#/$defs/githubMembership"},
+                "github_child_teams_memberships":{"type":"object","required":["sandbox-approvers","non-production-approvers","production-approvers","repository-administrators"],"additionalProperties":{"$ref":"#/$defs/githubMembership"}},
                 "google_basic_groups_env_memberships":{"type":"object","required":["admin","reader","writer"],"properties":{"admin":{"$ref":"#/$defs/envScopedGoogleGroups"},"reader":{"$ref":"#/$defs/envScopedGoogleGroups"},"writer":{"$ref":"#/$defs/envScopedGoogleGroups"}}},
-                "authentik_groups":{"type":"object","additionalProperties":{"type":"object","required":["description","label"],"properties":{"description":{"type":"string"},"label":{"type":"string"},"members":{"type":"object","description":"Explicit member emails per environment. Omitted environments have no members.","properties":{"sandbox":{"type":"array","items":{"type":"string"}},"non-production":{"type":"array","items":{"type":"string"}},"production":{"type":"array","items":{"type":"string"}}}}}}}},
-                "$defs":{"githubMembership":{"type":"object","required":["maintainers","members"],"properties":{"maintainers":{"type":"array","items":{"type":"string"}},"members":{"type":"array","items":{"type":"string"}}}},
-                "envScopedGoogleGroups":{"type":"object","properties":{"sandbox":{"$ref":"#/$defs/googleGroup"},"non-production":{"$ref":"#/$defs/googleGroup"},"production":{"$ref":"#/$defs/googleGroup"}}},
-                "googleGroup":{"type":"object","required":["owners","managers","members"],"properties":{"owners":{"type":"array","items":{"type":"string"}},"managers":{"type":"array","items":{"type":"string"}},"members":{"type":"array","items":{"type":"string"}}}}}}
+                "authentik_groups":{"type":"object","required":["openbao-secret-admins","openbao-secret-readers","openbao-secret-writers"],"properties":{"openbao-secret-admins":{"$ref":"#/$defs/openbaoAdminGroup"}},"additionalProperties":{"$ref":"#/$defs/applicationGroup"}}},
+                "$defs":{"githubMembership":{"type":"object","required":["maintainers","members"],"properties":{"maintainers":{"type":"array","minItems":1,"items":{"type":"string"}},"members":{"type":"array","items":{"type":"string"}}}},
+                "envScopedGoogleGroups":{"type":"object","required":["sandbox","non-production","production"],"properties":{"sandbox":{"$ref":"#/$defs/googleGroup"},"non-production":{"$ref":"#/$defs/googleGroup"},"production":{"$ref":"#/$defs/googleGroup"}}},
+                "googleGroup":{"type":"object","required":["owners","managers","members"],"properties":{"owners":{"type":"array","minItems":1,"items":{"type":"string"}},"managers":{"type":"array","items":{"type":"string"}},"members":{"type":"array","items":{"type":"string"}}}},
+                "applicationGroup":{"type":"object","required":["description","label"],"properties":{"description":{"type":"string"},"label":{"type":"string"},"members":{"type":"object","description":"Explicit member emails per environment. Omitted environments have no members.","properties":{"sandbox":{"type":"array","items":{"type":"string"}},"non-production":{"type":"array","items":{"type":"string"}},"production":{"type":"array","items":{"type":"string"}}}}}},
+                "openbaoAdminGroup":{"type":"object","required":["description","label","members"],"properties":{"description":{"type":"string"},"label":{"type":"string"},"members":{"type":"object","required":["sandbox","non-production","production"],"properties":{"sandbox":{"type":"array","minItems":1,"items":{"type":"string"}},"non-production":{"type":"array","minItems":1,"items":{"type":"string"}},"production":{"type":"array","minItems":1,"items":{"type":"string"}}}}}}}}
             - type: text
               text: "PR 1 is open. Please continue with the remaining approved onboarding PRs now."
     assert:
@@ -597,6 +616,23 @@ tests:
           if (!spec) {
             console.error('Expected the submitted st-nova spec; received tool calls:', JSON.stringify(calls));
             return false;
+          }
+          const sameList = (actual, expected) => Array.isArray(actual) &&
+            actual.length === expected.length && expected.every(value => actual.includes(value));
+          if (!sameList(spec.datadog_team_memberships?.admins, ['alice@osinfra.io']) ||
+              !sameList(spec.datadog_team_memberships?.members, [])) return false;
+          if (!sameList(spec.github_parent_team_memberships?.maintainers, ['alice-dev']) ||
+              !sameList(spec.github_parent_team_memberships?.members, [])) return false;
+          for (const key of ['sandbox-approvers', 'non-production-approvers', 'production-approvers', 'repository-administrators']) {
+            const child = spec.github_child_teams_memberships?.[key];
+            if (!sameList(child?.maintainers, ['alice-dev']) || !sameList(child?.members, [])) return false;
+          }
+          for (const role of ['admin', 'reader', 'writer']) {
+            for (const environment of ['sandbox', 'non-production', 'production']) {
+              const group = spec.google_basic_groups_env_memberships?.[role]?.[environment];
+              if (!sameList(group?.owners, ['alice@osinfra.io']) ||
+                  !sameList(group?.managers, []) || !sameList(group?.members, [])) return false;
+            }
           }
           return Boolean(spec) && Object.entries(context.vars.openbaoMembers).every(([role, expected]) =>
             Object.entries(expected).every(([environment, members]) => {
@@ -660,7 +696,7 @@ tests:
             Before submitting PR 2, change the OpenBao lists as follows, leaving Google membership unchanged:
             readers: sandbox reader-sb@osinfra.io, non-production empty, production reader-prod@osinfra.io;
             writers: sandbox empty, non-production writer-nonprod@osinfra.io, production empty;
-            admins: sandbox empty, non-production empty, production admin-prod@osinfra.io.
+            admins: sandbox admin-sb@osinfra.io, non-production admin-nonprod@osinfra.io, production admin-prod@osinfra.io.
             I confirm these exact environment-specific lists and authorize submitting the complete st-nova spec now.
       openbaoMembers:
         readers:
@@ -672,11 +708,41 @@ tests:
           non-production: [writer-nonprod@osinfra.io]
           production: []
         admins:
-          sandbox: []
-          non-production: []
+          sandbox: [admin-sb@osinfra.io]
+          non-production: [admin-nonprod@osinfra.io]
           production: [admin-prod@osinfra.io]
     assert:
       - *openbao_membership_assertion
+
+  - description: "Multi-turn onboard: reject confirmed empty OpenBao admin lists instead of submitting"
+    vars:
+      conversation: *confirmed_onboarding
+      continuation:
+        - role: user
+          content: >-
+            Before submitting PR 2, replace the OpenBao admins with empty lists in
+            sandbox and non-production, keeping alice@osinfra.io in production.
+            I confirm these exact lists and authorize creating the remaining PRs now.
+    assert:
+      - type: javascript
+        value: |
+          const parsed = typeof output === 'string'
+            ? output.split('\n').filter(line => /^\s*\{"type":"tool_use"/.test(line)).map(line => JSON.parse(line))
+            : output;
+          const calls = Array.isArray(parsed) ? parsed : (parsed?.tool_calls || parsed?.content || []);
+          const writes = ['open_team_pr', 'open_team_docs_pr', 'open_team_helpers_pr'];
+          return !calls.some(call => writes.includes(call.function?.name || call.name));
+      - type: llm-rubric
+        provider:
+          id: anthropic:messages:claude-sonnet-4-6
+          config:
+            temperature: 0
+        value: >-
+          The response must explain that each environment requires at least one
+          OpenBao Secret Admin and request admin membership for sandbox and
+          non-production. It must not submit the invalid configuration, silently
+          retain the previously confirmed admins, or copy production membership
+          into the empty environments without confirmation.
 
   # ═══════════════════════════════════════════════════════════════════════════
   # TEST 4: ADD MEMBER — explicit confirmation triggers open_team_pr

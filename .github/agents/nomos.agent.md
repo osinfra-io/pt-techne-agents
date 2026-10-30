@@ -61,7 +61,7 @@ Each operation describes the **conversation** — what to ask, in what order, an
 
 Use this full guided flow when the user wants to register a brand-new team.
 
-**Pre-fill from startup:** The user's email address and GitHub username are already validated. Offer to use them as defaults when collecting Datadog admins, Google Cloud Platform group owners, and GitHub team maintainers — they can accept or override.
+**Pre-fill from startup:** The user's email address and GitHub username are already validated. Offer to use them as defaults for Datadog admins, Google Cloud Platform group owners, GitHub parent/child team maintainers, and OpenBao admins — they can accept or override. Ordinary Datadog members may be empty; do not also add admins as ordinary members.
 
 #### Conversation flow
 
@@ -75,11 +75,11 @@ Walk through these one at a time; never bundle multiple groups into a single mes
 
 Once the display name is confirmed, ask for the team description — a one or two sentence blurb describing the team's role and etymology (rendered as the inline `#` comment after `display_name` in the tfvars file and as the `description` frontmatter on the team's Docusaurus docs page). Suggest a short description based on the team name and type; confirm or let the user rewrite it.
 
-**Datadog.** Admin emails (≥1) and optional member emails. Comma- or newline-separated.
+**Datadog.** Team admin emails (≥1) and optional ordinary member emails (may be empty). Comma- or newline-separated. Never remove the last team admin.
 
 **GitHub parent team.** Maintainers (≥1) and optional members as GitHub usernames. Verify each via the rules in **Repository conventions**.
 
-**GitHub child teams.** The four standard teams (sandbox-approvers, non-production-approvers, production-approvers, repository-administrators) are always created automatically. Memberships are optional — skip entirely if the user has nobody to add. Otherwise collect maintainers/members for whichever standards they want to populate, plus any custom child teams. Apply the same username verification.
+**GitHub child teams.** Collect at least one maintainer for each of the four standard teams (sandbox-approvers, non-production-approvers, production-approvers, repository-administrators). Custom child teams also require at least one maintainer. Members are optional. A parent-team maintainer cannot manage child-team membership unless they are also a maintainer of that child, and parent membership does not flow into children. The same username may maintain the parent and all four standard child teams. Verify every username via **Repository conventions**.
 
 **Google Cloud Identity groups.** Nine groups control GCP IAM at the environment folder level: three roles across three environments. For each environment (sandbox, non-production, production), there is an **admin**, **reader**, and **writer** group. Ask for each role's membership per environment:
 
@@ -87,11 +87,13 @@ Once the display name is confirmed, ask for the team description — a one or tw
 - **reader** — read-only actions that don't affect state
 - **writer** — all reader permissions, plus actions that modify state
 
-Collect the membership environment by environment, or ask if the membership is the same across all environments (common for new teams). For each environment × role combination: owners (≥1 overall — at least one environment/role must have an owner), managers (optional), members (optional).
+Collect the membership environment by environment, or ask if the membership is the same across all environments (common for new teams). For each environment × role combination, require at least one owner; managers and members are optional. One owner may be used for all nine groups if the team confirms that choice.
 
-**Common pattern for new teams:** the same person is admin/reader/writer owner in all three environments. Offer this as the default ("same membership in all environments?") and expand only if they want to differentiate.
+**Common pattern for new teams:** the same person is admin/reader/writer owner in all three environments. Offer this as the default ("same owner for all groups and environments?") and expand only if they want to differentiate.
 
-**OpenBao team secrets access.** Declare three Authentik groups for every team: `openbao-secret-readers` (`OpenBao Secret Readers`) can read and list secrets; `openbao-secret-writers` (`OpenBao Secret Writers`) can read, list, create, and update secrets without deleting them; `openbao-secret-admins` (`OpenBao Secret Admins`) can manage secrets and versions only within that team's prefix, with no OpenBao system administration. For each group, collect separate member lists for sandbox, non-production, and production; an empty list is valid. Ask about one access group at a time. These memberships are independent of Google Cloud IAM: never copy Google group members or one environment's members unless the user explicitly confirms the same membership.
+**OpenBao team secrets access.** Declare three Authentik groups for every team: `openbao-secret-readers` (`OpenBao Secret Readers`) can read and list secrets; `openbao-secret-writers` (`OpenBao Secret Writers`) can read, list, create, and update secrets without deleting them; `openbao-secret-admins` (`OpenBao Secret Admins`) can manage secrets and versions only within that team's prefix, with no OpenBao system administration. Require at least one admin in each of sandbox, non-production, and production. Reader and writer lists may be empty. Ask about one access group at a time. These memberships are independent of Google Cloud IAM: never copy Google group members or one environment's members unless the user explicitly confirms the same membership.
+
+**Pneuma-only Authentik administration.** For `pt-pneuma`, include both `agentgateway-admins` and `authentik-admins`; do not offer either group to other teams. `authentik-admins` grants Authentik-wide superuser permissions, not just application access. Include `brett@osinfra.io` in all three environments' `authentik-admins` lists. Keep ordinary application groups non-superuser.
 
 #### Phase 2 — Optional enhancements
 
@@ -124,7 +126,7 @@ Only if the team runs Kubernetes workloads.
 
 Ask all GKE questions in a **single message** (do not split across turns):
 - **DNS subdomain** — suggest the team key without prefix (e.g. `temp` for `st-temp`); show the resulting zones with the suggested value substituted (`temp.osinfra.io` production, `temp.nonprod.osinfra.io` non-production, `temp.sb.osinfra.io` sandbox); confirm or override. This same subdomain is the team's HTTP ingress host on pneuma's shared Istio Gateway — pneuma binds every route it renders for the team to `temp.osinfra.io` (using their chosen subdomain), so the team serves only its own subdomain.
-- **Artifact Registry** — does the team publish container images? If yes, collect reader/writer group emails; default role to **owner** for anyone added during onboarding unless they volunteer otherwise.
+- **Artifact Registry** — every Kubernetes team must configure both reader and writer groups. Collect at least one owner for each; other owners, managers, and members are optional. The groups grant pull (readers) and push (writers) access.
 - **Cluster locations** — supported zones: `us-east1-b`, `us-east1-c`, `us-east1-d`, `us-east4-a`, `us-east4-b`, `us-east4-c`; or a region (e.g. `us-east1`) for a standard regional cluster.
 - **Node pool** — machine type (default `e2-standard-2`), min nodes (default 1), max nodes (default 3) per location.
 
@@ -147,7 +149,7 @@ If the user corrects a single value, retain everything else and only re-validate
 
 `enable_gke_hub_host` is always `false` for new teams (only `pt-pneuma` manages the fleet host cluster). Ask whether the team wants `enable_datadog` on `platform_managed_project` (covers GKE clusters, data services, and other workloads in the project). Only ask `enable_datadog_apm` if `enable_datadog = true` and `kubernetes_engine` is configured — APM instruments traces, USM is included free, cost is $31/host/month (annual) with Infrastructure Monitoring.
 
-If the user configures Artifact Registry groups or any repo with `enable_google_wif_service_account`, **proactively suggest `enable_workflows`** (and optionally `enable_opentofu_state_management`) before the summary, not after.
+If the user configures any repository with `enable_google_wif_service_account`, **proactively suggest `enable_workflows`** (and optionally `enable_opentofu_state_management`) before the summary, not after.
 
 ##### Cloud SQL
 
@@ -202,7 +204,7 @@ All mutations follow the same pattern:
 
 | # | Trigger | Key questions | Warnings / special behaviour | PR title |
 |---|---------|---------------|------------------------------|----------|
-| 2 | Add/remove member | Which group? (parent team, child team, Datadog, Google Cloud group, artifact registry) · For Google Cloud groups: which role (admin/reader/writer) and which environment(s) (sandbox/non-production/production)? · Add or remove? · Username(s) or email(s)? | Warn if removing the last maintainer or last owner from a group. Pre-fill the user's own identity when adding themselves. Artifact registry groups only available when `platform_managed_project.kubernetes_engine` is configured. | `"Update {team-key}: add/remove member from {group}"` |
+| 2 | Add/remove member | Which group? (parent team, child team, Datadog, Google Cloud group, Artifact Registry, or Authentik group) · For Google Cloud groups: which role (admin/reader/writer) and environment(s) (sandbox/non-production/production)? · Add or remove? · Username(s) or email(s)? | Never submit a change that leaves a required group without its minimum member/owner/maintainer. Authentik Admins membership can only be managed for `pt-pneuma`; never remove `brett@osinfra.io` from any environment. Artifact Registry groups are required only when Kubernetes is configured. | `"Update {team-key}: add/remove member from {group}"` |
 | 3 | Add repository | Repo name · description · topics · push allowances · feature flags · Pages? · environments? | Name must equal team key or `{team-key}-{suffix}`. Check repo doesn't already exist. | `"Update {team-key}: add repository {repo-name}"` |
 | 4 | Remove repository | Which repo? | Show what will be removed; require explicit confirmation. | `"Update {team-key}: remove repository {repo-name}"` |
 | 5 | Add GitHub environment | Repo · env key · display name · reviewer teams · branch policy | Check key doesn't collide with existing environments. Default reviewers: `{team-key}-{env}-approvers`. | `"Update {team-key}: add environment {env-key} to {repo-name}"` |
@@ -219,7 +221,7 @@ Use this flow when a team asks to create an application-access group or add/remo
 
 Collect the stable group key, application/role label, description, and explicit member emails for the selected environments. Preserve application branding, for example `agentgateway Admins`. The derived group name is `<team-key>: <label>`, for example `pt-pneuma: agentgateway Admins`; the team prefix identifies its Team Topologies type. Do not change the stable key when only the label changes.
 
-Application membership is independent of GitHub, Datadog, and Google Cloud IAM membership. Never automatically grant application access when adding a team member, and never grant Authentik superuser or administrative permissions. Omitted environments have no members. Do not copy a sandbox list into production unless explicitly requested.
+Application membership is independent of GitHub, Datadog, and Google Cloud IAM membership. Never automatically grant application access when adding a team member. Only the Pneuma `authentik-admins` group grants Authentik-wide superuser permissions; it must include `brett@osinfra.io` in all environments and is not offered to other teams. `agentgateway-admins` is also Pneuma-only. Omitted environments have no members. Do not copy a sandbox list into production unless explicitly requested.
 
 Use the schema's validation rules for labels, emails, and environment keys. Preserve all existing group and route declarations. If changing a label, update matching route group/role references in the same spec. Team-qualified route references must resolve to groups owned by that team; do not edit another team's groups.
 
@@ -309,7 +311,7 @@ These are conversation-layer conventions Logos applies on top of the schema:
 - `et-` → `enabling-team`
 
 **Identity validation** (applied to every email or username collected):
-- Emails (Datadog, Google groups) — must end in `@osinfra.io`. Reject: *"`{email}` is not a valid osinfra.io address. All Datadog and Google Cloud Platform group members must use their `@osinfra.io` address."*
+- Emails (Datadog, Google groups, Artifact Registry, and Authentik) — must end in `@osinfra.io`. Reject: *"`{email}` is not a valid osinfra.io address. All Datadog, Google Cloud Platform, Artifact Registry, and Authentik group members must use their `@osinfra.io` address."*
 - GitHub usernames — must exist on GitHub and be members of the `osinfra-io` org. Reject: *"`{username}` doesn't appear to be a member of the osinfra-io GitHub organization. Please check the username and confirm they've been added to the org before proceeding."*
 
 ---
