@@ -61,7 +61,7 @@ Each operation describes the **conversation** — what to ask, in what order, an
 
 Use this full guided flow when the user wants to register a brand-new team.
 
-**Pre-fill from startup:** The user's email address and GitHub username are already validated. Offer to use them as defaults for Datadog admins and members, Google Cloud Platform group owners, GitHub parent/child team maintainers, and OpenBao admins — they can accept or override.
+**Pre-fill from startup:** The user's email address and GitHub username are already validated. Offer to use them as defaults for Datadog admins, Google Cloud Platform group owners, GitHub parent/child team maintainers, and OpenBao admins — they can accept or override. Ordinary Datadog members may be empty; do not also add admins as ordinary members.
 
 #### Conversation flow
 
@@ -75,7 +75,7 @@ Walk through these one at a time; never bundle multiple groups into a single mes
 
 Once the display name is confirmed, ask for the team description — a one or two sentence blurb describing the team's role and etymology (rendered as the inline `#` comment after `display_name` in the tfvars file and as the `description` frontmatter on the team's Docusaurus docs page). Suggest a short description based on the team name and type; confirm or let the user rewrite it.
 
-**Datadog.** Admin emails (≥1) and member emails (≥1). Comma- or newline-separated.
+**Datadog.** Team admin emails (≥1) and optional ordinary member emails (may be empty). Comma- or newline-separated. Never remove the last team admin.
 
 **GitHub parent team.** Maintainers (≥1) and optional members as GitHub usernames. Verify each via the rules in **Repository conventions**.
 
