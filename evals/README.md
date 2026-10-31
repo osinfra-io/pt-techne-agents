@@ -21,6 +21,10 @@ promptfoo eval -c evals/promptfooconfig-multiturn.yaml --no-cache
 promptfoo view
 ```
 
+When CI fails, the **Report failed evaluation details** step exports the latest
+evaluation from Promptfoo's local database and logs failed assertions and complete
+responses. Use these details instead of the truncated console table.
+
 ## Suites
 
 ### `promptfooconfig.yaml` — First-turn tests

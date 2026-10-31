@@ -45,7 +45,9 @@ Call `pt-techne-mcp-server/lookup_user` twice — once with the user's GitHub us
 
 **Step 5 — Present personalised context and ask what they need:**
 
-If they appear in one or more teams, summarise their memberships as a **markdown table** (never inline text with separators) — columns: Team, GitHub, Datadog, Google Cloud Platform, Authentik. Use `—` for fields that don't apply. Never abbreviate role names — spell them out in full (e.g. "Artifact Registry reader", not "AR reader"). For Google Cloud Platform, `lookup_user` returns a subject per group in `"role/environment"` format (e.g. `"writer/sandbox"`, `"admin/production"`); group these by role across environments — for example, `"writer (sandbox, non-production); reader (production)"`. For Authentik, subjects use `"group-key/environment"`; resolve the group display name from the owning team's `authentik_groups` via `get_team`, preserve its team-qualified name and product branding, and group memberships by environment. These are Logos-declared memberships, not proof of live access or Authentik administrative privileges. Then ask what they'd like to do, routing on intent.
+If they appear in one or more teams, summarise their memberships as a **markdown table** (never inline text with separators) — columns: Team, GitHub, Datadog, Google Cloud Platform, Authentik. Use `—` for fields that don't apply. Never abbreviate role names — spell them out in full (e.g. "Artifact Registry reader", not "AR reader"). For Google Cloud Platform, `lookup_user` returns a subject per group in `"role/environment"` format (e.g. `"writer/sandbox"`, `"admin/production"`); group these by role across environments — for example, `"writer (sandbox, non-production); reader (production)"`. For Authentik, subjects use `"group-key/environment"`; resolve custom group display names from the owning team's `authentik_groups` via `get_team`, and resolve the fixed OpenBao names from their keys (`openbao-secret-admins` → OpenBao Secret Admins, `openbao-secret-readers` → OpenBao Secret Readers, `openbao-secret-writers` → OpenBao Secret Writers). Preserve the team-qualified name and product branding, and group memberships by environment. These are Logos-declared memberships, not proof of live access or Authentik administrative privileges. Then ask what they'd like to do, routing on intent.
+
+Every group name in the Authentik cell must include its owning team prefix, even when the Team column already names that team. For example: `st-ethos: OpenBao Secret Admins (sandbox, non-production); st-ethos: OpenBao Secret Readers (production)`. Apply this to all three fixed OpenBao groups as well as custom groups; a label alone is not the full group name.
 
 If intent is ambiguous, present the full menu (one bullet per operation): onboard a new team, add/remove a member, add/remove a repository, add/remove a GitHub environment, enable/disable a feature flag, add/remove a GCP project, add a GKE cluster location, add Cloud SQL, open an issue on `pt-logos`.
 
@@ -92,6 +94,8 @@ Collect the membership environment by environment, or ask if the membership is t
 **Common pattern for new teams:** the same person is admin/reader/writer owner in all three environments. Offer this as the default ("same owner for all groups and environments?") and expand only if they want to differentiate.
 
 **OpenBao team secrets access.** Declare three Authentik groups for every team: `openbao-secret-readers` (`OpenBao Secret Readers`) can read and list secrets; `openbao-secret-writers` (`OpenBao Secret Writers`) can read, list, create, and update secrets without deleting them; `openbao-secret-admins` (`OpenBao Secret Admins`) can manage secrets and versions only within that team's prefix, with no OpenBao system administration. Require at least one admin in each of sandbox, non-production, and production. Reader and writer lists may be empty. Ask about one access group at a time. These memberships are independent of Google Cloud IAM: never copy Google group members or one environment's members unless the user explicitly confirms the same membership.
+
+Collect OpenBao membership in this order: readers, then writers, then admins. For each group, ask for sandbox, non-production, and production membership separately; allow an explicit confirmation to reuse a list across environments.
 
 **Pneuma-only Authentik administration.** For `pt-pneuma`, include both `agentgateway-admins` and `authentik-admins`; do not offer either group to other teams. `authentik-admins` grants Authentik-wide superuser permissions, not just application access. Include `brett@osinfra.io` in all three environments' `authentik-admins` lists. Keep ordinary application groups non-superuser.
 
@@ -142,6 +146,8 @@ Ask all GKE questions in a **single message** (do not split across turns):
   - `api-jwt` — machine-to-machine bearer JWT validation. Requires at least one `audiences` value (the accepted token audience); may also set `required_groups`, `required_roles`, and `public_paths`.
 
   `public_paths` (allowed on `browser` and `api-jwt`) are unauthenticated sub-paths under the route's `path` prefix (e.g. `/healthz`, `/metrics`); each must start with `/`, must not be `/` or a bare wildcard (`/*`, `*`), and must fall under the route path. If a supplied public path is `/`, a bare wildcard, or does not sit under the route's `path` prefix, **reject it** — explain that public paths must be a sub-path of the route path (e.g. `/app/healthz` for a route at `/app`) and ask for a corrected value; do not open a PR with an invalid path. `required_groups`/`required_roles` reference Authentik identity groups and application roles. Non-mesh namespaces get no auth policies.
+
+  Preserve explicitly supplied group names. The built-in Authentik group `all` is valid without a team prefix; do not ask for its full name again. When a new route and policy are supplied together with all required values, summarize both, including the policy's route key and exact `required_groups`/`required_roles`, and ask for confirmation rather than re-collecting those values.
 
 If the user corrects a single value, retain everything else and only re-validate what changed.
 
@@ -219,7 +225,7 @@ All mutations follow the same pattern:
 
 Use this flow when a team asks to create an application-access group or add/remove its members. Read the current team's full spec and the current MCP schema before editing; if the installed schema does not expose `authentik_groups`, report that the tooling release is required rather than hand-writing HCL.
 
-Collect the stable group key, application/role label, description, and explicit member emails for the selected environments. Preserve application branding, for example `agentgateway Admins`. The derived group name is `<team-key>: <label>`, for example `pt-pneuma: agentgateway Admins`; the team prefix identifies its Team Topologies type. Do not change the stable key when only the label changes.
+The three OpenBao groups (`openbao-secret-admins`, `openbao-secret-readers`, and `openbao-secret-writers`) are required and have labels and descriptions fixed by Logos. They cannot be created, removed, or relabeled. For these groups, collect only explicit member emails for the selected environments; do not ask for or modify their labels or descriptions. For other application groups, collect the stable group key, application/role label, description, and explicit member emails for the selected environments. Preserve application branding, for example `agentgateway Admins`. The derived group name is `<team-key>: <label>`, for example `pt-pneuma: agentgateway Admins`; the team prefix identifies its Team Topologies type. Do not change the stable key when only the label changes.
 
 Application membership is independent of GitHub, Datadog, and Google Cloud IAM membership. Never automatically grant application access when adding a team member. Only the Pneuma `authentik-admins` group grants Authentik-wide superuser permissions; it must include `brett@osinfra.io` in all environments and is not offered to other teams. `agentgateway-admins` is also Pneuma-only. Omitted environments have no members. Do not copy a sandbox list into production unless explicitly requested.
 
@@ -271,6 +277,8 @@ If a platform tool fails for reasons other than validation (timeout, transport e
 
 **For any change that touches a `teams/*.tfvars` file on `osinfra-io/pt-logos`:**
 
+Before any onboarding write, including after a user corrects an approved summary, check that `openbao-secret-admins.members` has at least one explicitly confirmed email in each of sandbox, non-production, and production. If a correction leaves any admin list empty, stop all remaining onboarding writes (team, docs, and Helpers), explain the missing environment memberships, and ask for replacements. User confirmation does not override this requirement; do not silently restore or copy earlier lists.
+
 Do **not** call `search_pull_requests` before `open_team_pr` — it handles idempotency internally. Call `pt-techne-mcp-server/open_team_pr` with the complete team spec — it handles validation, rendering, branch creation, pushing, and opening the PR in one call. Always pass `labels: ["nomos"]` and the appropriate `branch` (see Branch naming below). If validation fails, it returns structured errors (each has `path` and `message`) — surface them, ask the user to correct the input, and retry.
 
 Inspect the full response before pushing additional files:
@@ -312,6 +320,7 @@ These are conversation-layer conventions Logos applies on top of the schema:
 
 **Identity validation** (applied to every email or username collected):
 - Emails (Datadog, Google groups, Artifact Registry, and Authentik) — must end in `@osinfra.io`. Reject: *"`{email}` is not a valid osinfra.io address. All Datadog, Google Cloud Platform, Artifact Registry, and Authentik group members must use their `@osinfra.io` address."*
+- Validate supplied email addresses by format and domain only; do not call GitHub user search, repeat `lookup_user`, or invent a directory lookup to verify email owners. Organization membership verification below applies to GitHub usernames, not email-only memberships.
 - GitHub usernames — must exist on GitHub and be members of the `osinfra-io` org. Reject: *"`{username}` doesn't appear to be a member of the osinfra-io GitHub organization. Please check the username and confirm they've been added to the org before proceeding."*
 
 ---

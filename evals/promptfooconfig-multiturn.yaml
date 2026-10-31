@@ -36,6 +36,84 @@ providers:
 #   const text = typeof output === 'string' ? output : (Array.isArray(output?.content) ? output.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : (output?.content || ''));
 
 tests:
+  - description: "Startup context: membership-only OpenBao groups use fixed team-qualified names and group environments"
+    vars:
+      conversation:
+        - role: user
+          content: "Show my team memberships. My identity and organization membership have already been validated."
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_github
+              name: lookup_user
+              input:
+                github_username: alice-dev
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_github
+              content: '{"matches":[{"team_key":"st-ethos","via":"github_username","system":"github","scope":"team-parent","membership":"member"}]}'
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_email
+              name: lookup_user
+              input:
+                email: alice@osinfra.io
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_email
+              content: |
+                {"matches":[
+                  {"team_key":"st-ethos","via":"email","system":"authentik","scope":"application","subject":"openbao-secret-admins/sandbox","membership":"member"},
+                  {"team_key":"st-ethos","via":"email","system":"authentik","scope":"application","subject":"openbao-secret-admins/non-production","membership":"member"},
+                  {"team_key":"st-ethos","via":"email","system":"authentik","scope":"application","subject":"openbao-secret-readers/non-production","membership":"member"},
+                  {"team_key":"st-ethos","via":"email","system":"authentik","scope":"application","subject":"openbao-secret-readers/production","membership":"member"},
+                  {"team_key":"st-ethos","via":"email","system":"authentik","scope":"application","subject":"openbao-secret-writers/sandbox","membership":"member"},
+                  {"team_key":"st-ethos","via":"email","system":"authentik","scope":"application","subject":"openbao-secret-writers/production","membership":"member"}
+                ]}
+        - role: assistant
+          content:
+            - type: tool_use
+              id: toolu_team
+              name: get_team
+              input:
+                team_key: st-ethos
+        - role: user
+          content:
+            - type: tool_result
+              tool_use_id: toolu_team
+              content: |
+                {"spec":{"team_key":"st-ethos","authentik_groups":{
+                  "openbao-secret-admins":{"members":{"sandbox":["alice@osinfra.io"],"non-production":["alice@osinfra.io"],"production":["bob@osinfra.io"]}},
+                  "openbao-secret-readers":{"members":{"non-production":["alice@osinfra.io"],"production":["alice@osinfra.io"]}},
+                  "openbao-secret-writers":{"members":{"sandbox":["alice@osinfra.io"],"production":["alice@osinfra.io"]}}
+                }}}
+    assert:
+      - type: javascript
+        value: |
+          const content = Array.isArray(output) ? output : output?.content;
+          const text = typeof output === 'string' ? output : (Array.isArray(content) ? content.filter(c => c.type === 'text').map(c => c.text).join('\n') : (typeof content === 'string' ? content : ''));
+          const rows = text.split('\n').filter(line => /^\s*\|/.test(line)).map(line => line.split('|').slice(1, -1));
+          const header = rows.find(cells => ['Team', 'GitHub', 'Datadog', 'Google Cloud Platform', 'Authentik'].every(name => cells.some(cell => cell.trim() === name)));
+          if (!header) return false;
+          const row = rows.find(cells => cells[0]?.includes('st-ethos'));
+          const cell = row?.[header.findIndex(cell => cell.trim() === 'Authentik')] ?? '';
+          return ['Admins', 'Readers', 'Writers'].every(role => cell.includes(`st-ethos: OpenBao Secret ${role}`));
+      - type: llm-rubric
+        provider:
+          id: anthropic:messages:claude-sonnet-4-6
+          config:
+            temperature: 0
+        value: |
+          The membership summary correctly groups alice's OpenBao memberships by deployment environment:
+          sandbox has OpenBao Secret Admins and OpenBao Secret Writers;
+          non-production has OpenBao Secret Admins and OpenBao Secret Readers;
+          production has OpenBao Secret Readers and OpenBao Secret Writers, but not OpenBao Secret Admins.
+          Grouping by role with the equivalent environment lists is also acceptable.
+          It must resolve the fixed names without asking the user for missing labels or descriptions.
+
   - description: "Startup context: includes declared Authentik groups and environments alongside existing systems"
     vars:
       conversation:
@@ -592,12 +670,13 @@ tests:
                 "github_parent_team_memberships":{"$ref":"#/$defs/githubMembership"},
                 "github_child_teams_memberships":{"type":"object","required":["sandbox-approvers","non-production-approvers","production-approvers","repository-administrators"],"additionalProperties":{"$ref":"#/$defs/githubMembership"}},
                 "google_basic_groups_env_memberships":{"type":"object","required":["admin","reader","writer"],"properties":{"admin":{"$ref":"#/$defs/envScopedGoogleGroups"},"reader":{"$ref":"#/$defs/envScopedGoogleGroups"},"writer":{"$ref":"#/$defs/envScopedGoogleGroups"}}},
-                "authentik_groups":{"type":"object","required":["openbao-secret-admins","openbao-secret-readers","openbao-secret-writers"],"properties":{"openbao-secret-admins":{"$ref":"#/$defs/openbaoAdminGroup"}},"additionalProperties":{"$ref":"#/$defs/applicationGroup"}}},
+                "authentik_groups":{"type":"object","required":["openbao-secret-admins","openbao-secret-readers","openbao-secret-writers"],"properties":{"openbao-secret-admins":{"$ref":"#/$defs/openbaoSecretAdminGroup"},"openbao-secret-readers":{"$ref":"#/$defs/openbaoSecretMemberGroup"},"openbao-secret-writers":{"$ref":"#/$defs/openbaoSecretMemberGroup"}},"additionalProperties":{"$ref":"#/$defs/applicationGroup"}}},
                 "$defs":{"githubMembership":{"type":"object","required":["maintainers","members"],"properties":{"maintainers":{"type":"array","minItems":1,"items":{"type":"string"}},"members":{"type":"array","items":{"type":"string"}}}},
                 "envScopedGoogleGroups":{"type":"object","required":["sandbox","non-production","production"],"properties":{"sandbox":{"$ref":"#/$defs/googleGroup"},"non-production":{"$ref":"#/$defs/googleGroup"},"production":{"$ref":"#/$defs/googleGroup"}}},
                 "googleGroup":{"type":"object","required":["owners","managers","members"],"properties":{"owners":{"type":"array","minItems":1,"items":{"type":"string"}},"managers":{"type":"array","items":{"type":"string"}},"members":{"type":"array","items":{"type":"string"}}}},
                 "applicationGroup":{"type":"object","required":["description","label"],"properties":{"description":{"type":"string"},"label":{"type":"string"},"members":{"type":"object","description":"Explicit member emails per environment. Omitted environments have no members.","properties":{"sandbox":{"type":"array","items":{"type":"string"}},"non-production":{"type":"array","items":{"type":"string"}},"production":{"type":"array","items":{"type":"string"}}}}}},
-                "openbaoAdminGroup":{"type":"object","required":["description","label","members"],"properties":{"description":{"type":"string"},"label":{"type":"string"},"members":{"type":"object","required":["sandbox","non-production","production"],"properties":{"sandbox":{"type":"array","minItems":1,"items":{"type":"string"}},"non-production":{"type":"array","minItems":1,"items":{"type":"string"}},"production":{"type":"array","minItems":1,"items":{"type":"string"}}}}}}}}
+                "openbaoSecretMemberGroup":{"type":"object","additionalProperties":false,"properties":{"members":{"type":"object","additionalProperties":false,"properties":{"sandbox":{"type":"array","items":{"type":"string"}},"non-production":{"type":"array","items":{"type":"string"}},"production":{"type":"array","items":{"type":"string"}}}}}},
+                "openbaoSecretAdminGroup":{"type":"object","additionalProperties":false,"required":["members"],"properties":{"members":{"type":"object","additionalProperties":false,"required":["sandbox","non-production","production"],"properties":{"sandbox":{"type":"array","minItems":1,"items":{"type":"string"}},"non-production":{"type":"array","minItems":1,"items":{"type":"string"}},"production":{"type":"array","minItems":1,"items":{"type":"string"}}}}}}}}
             - type: text
               text: "PR 1 is open. Please continue with the remaining approved onboarding PRs now."
     assert:

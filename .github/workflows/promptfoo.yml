@@ -44,3 +44,19 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
+      - name: Report failed evaluation details
+        if: failure()
+        run: |
+          npx promptfoo@latest export eval latest -o failed-eval.json
+          node <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('failed-eval.json', 'utf8'));
+          for (const result of report.results.results.filter(result => !result.success)) {
+            console.log(JSON.stringify({
+              test: result.testCase.description,
+              error: result.error,
+              grading: result.gradingResult,
+              response: result.response,
+            }, null, 2));
+          }
+          NODE
