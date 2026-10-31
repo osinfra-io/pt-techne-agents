@@ -95,6 +95,8 @@ Collect the membership environment by environment, or ask if the membership is t
 
 **OpenBao team secrets access.** Declare three Authentik groups for every team: `openbao-secret-readers` (`OpenBao Secret Readers`) can read and list secrets; `openbao-secret-writers` (`OpenBao Secret Writers`) can read, list, create, and update secrets without deleting them; `openbao-secret-admins` (`OpenBao Secret Admins`) can manage secrets and versions only within that team's prefix, with no OpenBao system administration. Require at least one admin in each of sandbox, non-production, and production. Reader and writer lists may be empty. Ask about one access group at a time. These memberships are independent of Google Cloud IAM: never copy Google group members or one environment's members unless the user explicitly confirms the same membership.
 
+Collect OpenBao membership in this order: readers, then writers, then admins. For each group, ask for sandbox, non-production, and production membership separately; allow an explicit confirmation to reuse a list across environments.
+
 **Pneuma-only Authentik administration.** For `pt-pneuma`, include both `agentgateway-admins` and `authentik-admins`; do not offer either group to other teams. `authentik-admins` grants Authentik-wide superuser permissions, not just application access. Include `brett@osinfra.io` in all three environments' `authentik-admins` lists. Keep ordinary application groups non-superuser.
 
 #### Phase 2 — Optional enhancements
@@ -144,6 +146,8 @@ Ask all GKE questions in a **single message** (do not split across turns):
   - `api-jwt` — machine-to-machine bearer JWT validation. Requires at least one `audiences` value (the accepted token audience); may also set `required_groups`, `required_roles`, and `public_paths`.
 
   `public_paths` (allowed on `browser` and `api-jwt`) are unauthenticated sub-paths under the route's `path` prefix (e.g. `/healthz`, `/metrics`); each must start with `/`, must not be `/` or a bare wildcard (`/*`, `*`), and must fall under the route path. If a supplied public path is `/`, a bare wildcard, or does not sit under the route's `path` prefix, **reject it** — explain that public paths must be a sub-path of the route path (e.g. `/app/healthz` for a route at `/app`) and ask for a corrected value; do not open a PR with an invalid path. `required_groups`/`required_roles` reference Authentik identity groups and application roles. Non-mesh namespaces get no auth policies.
+
+  Preserve explicitly supplied group names. The built-in Authentik group `all` is valid without a team prefix; do not ask for its full name again. When a new route and policy are supplied together with all required values, summarize both, including the policy's route key and exact `required_groups`/`required_roles`, and ask for confirmation rather than re-collecting those values.
 
 If the user corrects a single value, retain everything else and only re-validate what changed.
 
@@ -272,6 +276,8 @@ Use the GitHub MCP tools for all file and PR operations — never use shell comm
 If a platform tool fails for reasons other than validation (timeout, transport error, internal server error), surface the raw error to the user, do **not** write or modify any tfvars file, and suggest opening an issue on `osinfra-io/pt-techne-mcp-server`. Never fall back to hand-writing HCL.
 
 **For any change that touches a `teams/*.tfvars` file on `osinfra-io/pt-logos`:**
+
+Before any onboarding write, including after a user corrects an approved summary, check that `openbao-secret-admins.members` has at least one explicitly confirmed email in each of sandbox, non-production, and production. If a correction leaves any admin list empty, stop all remaining onboarding writes (team, docs, and Helpers), explain the missing environment memberships, and ask for replacements. User confirmation does not override this requirement; do not silently restore or copy earlier lists.
 
 Do **not** call `search_pull_requests` before `open_team_pr` — it handles idempotency internally. Call `pt-techne-mcp-server/open_team_pr` with the complete team spec — it handles validation, rendering, branch creation, pushing, and opening the PR in one call. Always pass `labels: ["nomos"]` and the appropriate `branch` (see Branch naming below). If validation fails, it returns structured errors (each has `path` and `message`) — surface them, ask the user to correct the input, and retry.
 
