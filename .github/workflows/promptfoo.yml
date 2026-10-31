@@ -43,21 +43,3 @@ jobs:
           no-share: true
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-
-      - name: Report failed evaluation details
-        if: failure()
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          for (const file of fs.readdirSync('.').filter(name => /^output-.*\.json$/.test(name))) {
-            const report = JSON.parse(fs.readFileSync(file, 'utf8'));
-            for (const result of report.results.results.filter(result => !result.success)) {
-              console.log(JSON.stringify({
-                test: result.testCase.description,
-                error: result.error,
-                grading: result.gradingResult,
-                response: result.response,
-              }, null, 2));
-            }
-          }
-          NODE

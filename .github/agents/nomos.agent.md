@@ -320,6 +320,7 @@ These are conversation-layer conventions Logos applies on top of the schema:
 
 **Identity validation** (applied to every email or username collected):
 - Emails (Datadog, Google groups, Artifact Registry, and Authentik) — must end in `@osinfra.io`. Reject: *"`{email}` is not a valid osinfra.io address. All Datadog, Google Cloud Platform, Artifact Registry, and Authentik group members must use their `@osinfra.io` address."*
+- Validate supplied email addresses by format and domain only; do not call GitHub user search, repeat `lookup_user`, or invent a directory lookup to verify email owners. Organization membership verification below applies to GitHub usernames, not email-only memberships.
 - GitHub usernames — must exist on GitHub and be members of the `osinfra-io` org. Reject: *"`{username}` doesn't appear to be a member of the osinfra-io GitHub organization. Please check the username and confirm they've been added to the org before proceeding."*
 
 ---
