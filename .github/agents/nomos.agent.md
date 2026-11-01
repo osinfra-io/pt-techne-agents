@@ -120,7 +120,7 @@ For each repository collect:
 - **Description** — suggest based on the repo name pattern, then confirm: if name equals the team key → the team's display-name description; if it ends in `-ai-context` → *"Centralized AI context and GitHub Copilot instructions for the {team-key} team."*; otherwise propose one based on name and team purpose.
 - **Topics** — auto-include team key + team-type topic; ask for additional technology topics.
 - **Push allowances** — default `osinfra-io/{team-key}`.
-- **Feature flags** — `enable_datadog_webhook` (default true), `enable_datadog_secrets` (default false; only if the repo instruments code with Datadog), `enable_google_wif_service_account` (default false; only if the repo deploys infra or pushes images to GCP), `enable_ruleset` (default true; set false only for docs-only repos or those managing their own branch protection).
+- **Feature flags** — `enable_datadog_secrets` (default false; only if the repo's own workflows call the Datadog API, for example to define Datadog monitors, dashboards, or synthetic tests with OpenTofu), `enable_google_wif_service_account` (default false; only if the repo deploys infra or pushes images to GCP), `enable_ruleset` (default true; set false only for docs-only repos or those managing their own branch protection).
 - **Pages** — only if the repo publishes a GitHub Pages site; ask `build_type` (`workflow` default, or `legacy`), optional `cname`, and if `legacy` ask `source.branch` and optional `source.path`.
 - **Environments** — only for repos with GitHub Actions deployments; reviewer teams default to `{team-key}-{env}-approvers`.
 
@@ -153,7 +153,7 @@ If the user corrects a single value, retain everything else and only re-validate
 
 **Auto-populate subnet ranges** — follow the IPAM procedure in **Operation 10**. Present the suggested ranges for confirmation before adding them to the spec.
 
-`enable_gke_hub_host` is always `false` for new teams (only `pt-pneuma` manages the fleet host cluster). Ask whether the team wants `enable_datadog` on `platform_managed_project` (covers GKE clusters, data services, and other workloads in the project). Only ask `enable_datadog_apm` if `enable_datadog = true` and `kubernetes_engine` is configured — APM instruments traces, USM is included free, cost is $31/host/month (annual) with Infrastructure Monitoring.
+`enable_gke_hub_host` is always `false` for new teams (only `pt-pneuma` manages the fleet host cluster). Datadog is enforced by the platform and is never asked about.
 
 If the user configures any repository with `enable_google_wif_service_account`, **proactively suggest `enable_workflows`** (and optionally `enable_opentofu_state_management`) before the summary, not after.
 
@@ -163,7 +163,7 @@ Only if the team needs a managed PostgreSQL instance. A team may declare one or 
 
 ##### Additional Google Cloud Platform projects
 
-If the team needs projects beyond the standard ones Corpus creates, set `enable_google_project = true` and collect optional `google_project_services` (e.g. `bigquery.googleapis.com`) and `google_project_enable_datadog` (default `false`). The GCP project ID is derived from the team key by Corpus — teams do not choose a project name.
+If the team needs projects beyond the standard ones Corpus creates, set `enable_google_project = true` and collect optional `google_project_services` (e.g. `bigquery.googleapis.com`). The GCP project ID is derived from the team key by Corpus — teams do not choose a project name.
 
 #### Summary and PRs
 
@@ -215,7 +215,7 @@ All mutations follow the same pattern:
 | 4 | Remove repository | Which repo? | Show what will be removed; require explicit confirmation. | `"Update {team-key}: remove repository {repo-name}"` |
 | 5 | Add GitHub environment | Repo · env key · display name · reviewer teams · branch policy | Check key doesn't collide with existing environments. Default reviewers: `{team-key}-{env}-approvers`. | `"Update {team-key}: add environment {env-key} to {repo-name}"` |
 | 6 | Remove GitHub environment | Repo · env key | Show config; require explicit confirmation. | `"Update {team-key}: remove environment {env-key} from {repo-name}"` |
-| 7 | Enable/disable feature flag | Which flag? (menu: team-level, project-level, repo-level) · Enable or disable? | Dependency warnings: `enable_opentofu_state_management` requires `enable_workflows`; `enable_google_wif_service_account` requires `enable_workflows`; `enable_datadog_apm` requires `enable_datadog` + `kubernetes_engine`. Only show project-level flags when `platform_managed_project` exists; only show `enable_datadog_apm` when `enable_datadog` is true and `kubernetes_engine` is configured. | `"Update {team-key}: {enable/disable} {flag-name}"` |
+| 7 | Enable/disable feature flag | Which flag? (menu: team-level, project-level, repo-level) · Enable or disable? | Dependency warnings: `enable_opentofu_state_management` requires `enable_workflows`; `enable_google_wif_service_account` requires `enable_workflows`. Only show project-level flags when `platform_managed_project` exists. | `"Update {team-key}: {enable/disable} {flag-name}"` |
 | 8 | Add GCP project | Optional API services · enable Datadog? | Check `enable_google_project` not already true. | `"Update {team-key}: add Google Cloud Platform project"` |
 | 9 | Remove GCP project | (just team key) | Warn: Corpus will destroy the GCP project on next apply. Require explicit confirmation. | `"Update {team-key}: remove Google Cloud Platform project"` |
 | 11 | Add Cloud SQL | Instance name (team-chosen map key, e.g. `authentik`) · regions (`us-east1`/`us-east4`) · database version (default `POSTGRES_16`) · machine tier (default `db-f1-micro`) | If `platform_managed_project` missing, ask to add it. Show existing config if `cloud_sql` already set. A team may have multiple named instances — before building the spec, check the chosen name is not already a `cloud_sql` key; if it exists, show the current entry and require explicit confirmation before replacing it (otherwise the add silently overwrites its regions, version, or tier). | `"Update {team-key}: add Cloud SQL"` |
@@ -255,7 +255,7 @@ Call `get_team` with the team key. Check the location doesn't already exist.
 1. Call `next_available_cidrs` with `count` equal to the number of locations being added (usually 1).
 2. Present the returned CIDRs to the user for confirmation before including them in the spec.
 
-`enable_gke_hub_host` — always `false`; only `pt-pneuma` manages the fleet host cluster. Preserve existing `enable_datadog` and `enable_datadog_apm` values.
+`enable_gke_hub_host` — always `false`; only `pt-pneuma` manages the fleet host cluster.
 
 **Open two PRs concurrently:**
 
